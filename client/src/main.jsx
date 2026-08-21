@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
+import React, {createContext, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Search, UserRound, Heart, ShoppingBag, Menu, X, ArrowRight, ChevronDown, Instagram, Facebook, Youtube, Truck, RotateCcw, ShieldCheck, Headphones, Plus, Pencil, Trash2, LayoutDashboard, Package, Tags, Layers3, FileText, LogOut, SlidersHorizontal, CheckCircle2, PackageCheck, Minus, Play, ExternalLink, MapPin, Monitor, Smartphone, RefreshCw} from 'lucide-react';
 import './styles.css';
@@ -84,7 +84,9 @@ function Shop(){
  const homeProducts=query?shown:shown.slice(0,4);
  const homeLayout=loadLayouts().home;
  const customHomeActive=homeLayout?.status!=='Draft'&&homeLayout?.blocks?.length>0;
- const [headerMenu]=useState(loadMenu);
+ const [headerMenu,setHeaderMenu]=useState(loadMenu);
+ useEffect(()=>{const refresh=()=>setHeaderMenu(loadMenu());addEventListener('fm-menu-updated',refresh);addEventListener('storage',refresh);return()=>{removeEventListener('fm-menu-updated',refresh);removeEventListener('storage',refresh)}},[]);
+ const openMenuItem=url=>{if(/^https?:\/\//i.test(url||''))window.location.assign(url);else go(url||'/')};
  const add=p=>{setCart(c=>{const x=c.find(i=>i.id===p.id);return x?c.map(i=>i.id===p.id?{...i,qty:i.qty+1}:i):[...c,{...p,qty:1}]});go('/cart')};
  return <div>
   <div className="storefront-header-wrap"><Announcement/>
@@ -101,7 +103,7 @@ function Shop(){
    </div>
    <nav className={menu?'open':''}>
     <button className="nav-close mobile" onClick={()=>setMenu(false)}><X/></button>
-    {headerMenu.filter(x=>x.active!==false).map(item=><a key={item.id} onClick={()=>{go(item.url||'/');setMenu(false)}} className={item.label==='Sale'?'sale':''}>{item.label}</a>)}
+    {headerMenu.filter(x=>x.active!==false).map(item=><a key={item.id} onClick={()=>{openMenuItem(item.url);setMenu(false)}} className={item.label==='Sale'?'sale':''}>{item.label}</a>)}
    </nav>
    {search&&<div className="searchbar"><Search/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search styles, collections and more"/><button onClick={()=>{setSearch(false);setQuery('')}}><X/></button></div>}
   </header></div>
@@ -187,10 +189,14 @@ function AdminTypographyControl({settings,setSettings}){
 }
 
 function MenuAdmin(){
- const [items,setItems]=useState(loadMenu),[saved,setSaved]=useState(false);
- const update=(id,key,value)=>setItems(list=>list.map(x=>x.id===id?{...x,[key]:value}:x));
- const save=()=>{localStorage.setItem('fm-header-menu',JSON.stringify(items));setSaved(true);setTimeout(()=>setSaved(false),1800)};
- return <section className="admin-panel dynamic-admin-panel"><div className="panel-head"><div><h2>Header menu</h2><p>Add, remove, rename and reorder the links shown in the website header.</p></div><button className="admin-primary" onClick={()=>setItems(x=>[...x,{id:uid(),label:'New link',url:'/shop',active:true}])}><Plus/> ADD MENU ITEM</button></div><div className="menu-admin-list">{items.map((item,i)=><article key={item.id}><span className="drag-number">{String(i+1).padStart(2,'0')}</span><label>Menu label<input value={item.label} onChange={e=>update(item.id,'label',e.target.value)}/></label><label>Link<select value={item.url} onChange={e=>update(item.id,'url',e.target.value)}><option value="/shop">Shop</option>{collectionLinks.map(([n,s])=><option key={s} value={collectionPath(s)}>{n}</option>)}<option value="/about">About Us</option><option value="/contact">Contact Us</option><option value="/track-order">Track Order</option></select></label><label className="menu-visible"><input type="checkbox" checked={item.active!==false} onChange={e=>update(item.id,'active',e.target.checked)}/> Visible</label><div className="menu-order"><button disabled={i===0} onClick={()=>setItems(a=>{const n=[...a];[n[i-1],n[i]]=[n[i],n[i-1]];return n})}>↑</button><button disabled={i===items.length-1} onClick={()=>setItems(a=>{const n=[...a];[n[i],n[i+1]]=[n[i+1],n[i]];return n})}>↓</button><button className="danger" onClick={()=>setItems(a=>a.filter(x=>x.id!==item.id))}><Trash2/></button></div></article>)}</div><div className="admin-save-bar"><span>{saved?'Menu saved. Refresh storefront to see changes.':'Changes are shown after saving.'}</span><button onClick={save}>SAVE HEADER MENU</button></div></section>
+ const [items,setItems]=useState(loadMenu),[saved,setSaved]=useState(false),[dirty,setDirty]=useState(false);const listRef=useRef(null);
+ const change=fn=>{setItems(fn);setDirty(true);setSaved(false)};
+ const update=(id,key,value)=>change(list=>list.map(x=>x.id===id?{...x,[key]:value}:x));
+ const addItem=()=>{const item={id:uid(),label:'New Menu Item',url:'/shop',active:true};change(x=>[...x,item]);requestAnimationFrame(()=>setTimeout(()=>{const row=listRef.current?.lastElementChild;row?.scrollIntoView({behavior:'smooth',block:'center'});row?.querySelector('input')?.focus();row?.querySelector('input')?.select()},60))};
+ const move=(index,direction)=>change(current=>{const next=[...current],target=index+direction;if(target<0||target>=next.length)return current;[next[index],next[target]]=[next[target],next[index]];return next});
+ const save=()=>{const clean=items.filter(x=>x.label.trim()).map(x=>({...x,label:x.label.trim(),url:x.url.trim()||'/'}));setItems(clean);localStorage.setItem('fm-header-menu',JSON.stringify(clean));dispatchEvent(new Event('fm-menu-updated'));setDirty(false);setSaved(true);setTimeout(()=>setSaved(false),2200)};
+ const knownUrls=['/shop',...collectionLinks.map(([,slug])=>collectionPath(slug)),'/about','/contact','/track-order','/shipping-returns'];
+ return <section className="admin-panel dynamic-admin-panel menu-manager"><div className="panel-head"><div><p className="admin-kicker">NAVIGATION</p><h2>Header menu</h2><p>Add, remove, rename and reorder the links shown in the website header.</p></div><button type="button" className="admin-primary add-menu-item" onClick={addItem}><Plus/> ADD MENU ITEM</button></div><div className="menu-manager-note"><span><strong>{items.filter(x=>x.active!==false).length}</strong> visible menu items</span><small>Changes become live after clicking “Save Header Menu”.</small></div><div className="menu-admin-list" ref={listRef}>{items.map((item,i)=><article key={item.id}><span className="drag-number">{String(i+1).padStart(2,'0')}</span><label>Menu label<input value={item.label} placeholder="Example: New Arrivals" onChange={e=>update(item.id,'label',e.target.value)}/></label><label>Link<select value={knownUrls.includes(item.url)?item.url:'custom'} onChange={e=>update(item.id,'url',e.target.value==='custom'?'':e.target.value)}><option value="/shop">Shop</option>{collectionLinks.map(([n,s])=><option key={s} value={collectionPath(s)}>{n}</option>)}<option value="/about">About Us</option><option value="/contact">Contact Us</option><option value="/track-order">Track Order</option><option value="/shipping-returns">Shipping & Returns</option><option value="custom">Custom link…</option></select>{!knownUrls.includes(item.url)&&<input className="custom-menu-url" value={item.url} placeholder="/page-link or https://..." onChange={e=>update(item.id,'url',e.target.value)}/>}</label><label className="menu-visible"><input type="checkbox" checked={item.active!==false} onChange={e=>update(item.id,'active',e.target.checked)}/><span>Visible</span></label><div className="menu-order"><button type="button" title="Move up" aria-label={`Move ${item.label} up`} disabled={i===0} onClick={()=>move(i,-1)}>↑</button><button type="button" title="Move down" aria-label={`Move ${item.label} down`} disabled={i===items.length-1} onClick={()=>move(i,1)}>↓</button><button type="button" title="Delete menu item" aria-label={`Delete ${item.label}`} className="danger" onClick={()=>change(a=>a.filter(x=>x.id!==item.id))}><Trash2/></button></div></article>)}</div><div className="admin-save-bar"><span className={saved?'save-success':dirty?'save-pending':''}>{saved?'Menu saved and published successfully.':dirty?'You have unsaved menu changes.':'Header menu is up to date.'}</span><button type="button" disabled={!dirty} onClick={save}>SAVE HEADER MENU</button></div></section>
 }
 
 function LegacyHomeSectionsAdmin({products}){
