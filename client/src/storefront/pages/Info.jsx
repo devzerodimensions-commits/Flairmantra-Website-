@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {Mail, Phone, MapPin, Clock, Instagram, Facebook, CheckCircle2, Truck, RotateCcw, Repeat, HelpCircle, ArrowRight, FileQuestion} from 'lucide-react';
-import {useStore, API, readJSON, writeJSON, money, FREE_SHIPPING} from '../store';
+import {useStore, API, readJSON, writeJSON, money} from '../store';
 import {Breadcrumbs, Empty, Link} from '../components';
 
 const useTitle = t => useEffect(() => { document.title = `${t} | FlairMantra`; }, [t]);
@@ -21,14 +21,22 @@ export function AboutPage() {
 export function ContactPage() {
   const {settings} = useStore();
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   useTitle('Contact us');
-  const submit = e => {
+  const submit = async e => {
     e.preventDefault();
-    const data = {...Object.fromEntries(new FormData(e.currentTarget)), id: Math.random().toString(36).slice(2), date: new Date().toISOString()};
-    writeJSON('fm-inquiries', [data, ...readJSON('fm-inquiries', [])]);
-    fetch(`${API}/contact`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)}).catch(() => {});
-    setSent(true);
-    e.currentTarget.reset();
+    const form = e.currentTarget;
+    const data = {...Object.fromEntries(new FormData(form)), id: Math.random().toString(36).slice(2), date: new Date().toISOString()};
+    setError(''); setBusy(true);
+    try {
+      const r = await fetch(`${API}/contact`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data), signal: AbortSignal.timeout(10000)});
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message);
+    } catch (err) {
+      if (!import.meta.env.DEV) { setError(err.message || `We couldn’t send your message. Please email us at ${settings.email}.`); setBusy(false); return; }
+      writeJSON('fm-inquiries', [data, ...readJSON('fm-inquiries', [])]); // local development without a server
+    }
+    setBusy(false); setSent(true); form.reset();
   };
   const tel = n => `tel:${String(n).replace(/\D/g, '')}`;
   return <div className="sf-wrap sf-contact">
@@ -58,7 +66,8 @@ export function ContactPage() {
         <label className="sf-field"><span>Phone (optional)</span><input name="phone" type="tel" autoComplete="tel"/></label>
         <label className="sf-field"><span>Topic</span><select name="subject"><option>Product &amp; styling advice</option><option>Order support</option><option>Returns &amp; exchange</option><option>Wholesale enquiry</option><option>Other</option></select></label>
         <label className="sf-field"><span>Message</span><textarea name="message" rows="5" required/></label>
-        <button className="sf-btn sf-btn-block">Send message</button>
+        {error && <p className="sf-error sf-form-error">{error}</p>}
+        <button className="sf-btn sf-btn-block" disabled={busy}>{busy ? 'Sending…' : 'Send message'}</button>
         {sent && <p className="sf-success"><CheckCircle2/> Thank you — we’ve received your message and will reply soon.</p>}
       </form>
     </div>
@@ -66,10 +75,10 @@ export function ContactPage() {
 }
 
 export function ShippingPage() {
-  const {settings} = useStore();
+  const {settings, freeShipping} = useStore();
   useTitle('Shipping & returns');
   const items = [
-    [Truck, 'Shipping', <>Shipping within Canada is free on orders over <b>{money(FREE_SHIPPING)}</b>. We also ship to the USA, UK and Australia at flat rates confirmed with your order. Tracking details are shared once your order ships.</>],
+    [Truck, 'Shipping', <>Shipping within Canada is free on orders over <b>{money(freeShipping)}</b>. We also ship to the USA, UK and Australia at flat rates confirmed with your order. Tracking details are shared once your order ships.</>],
     [RotateCcw, '15-day returns', <>Returns are accepted within <b>15 days of delivery</b>. Items must be unworn, unwashed, unaltered and returned with original tags and packaging.</>],
     [Repeat, 'First size exchange is free', <>Your first size exchange on an eligible item is complimentary, subject to the new size being in stock.</>],
     [HelpCircle, 'Need help?', <>Contact us with your order number at <a href={`mailto:${settings.email}`}>{settings.email}</a> or <a href={`tel:${settings.phone1.replace(/\D/g, '')}`}>{settings.phone1}</a>. We’re available {settings.hours.toLowerCase()}.</>]
@@ -83,7 +92,7 @@ export function ShippingPage() {
 }
 
 export function CmsPage({slug}) {
-  const page = readJSON('fm-pages', []).find(p => p.slug === slug && p.status !== 'Draft');
+  const page = (useStore().content.pages || []).find(p => p.slug === slug && p.status !== 'Draft');
   useTitle(page?.metaTitle || page?.name || 'Page not found');
   if (!page) return <div className="sf-wrap"><Empty icon={FileQuestion} title="Page not found" text="The page you’re looking for doesn’t exist or has moved." action="Back to home" to="/"/></div>;
   return <div className="sf-wrap sf-policy">

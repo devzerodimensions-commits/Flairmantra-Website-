@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {ArrowRight, ChevronLeft, ChevronRight, Instagram, Play, Quote} from 'lucide-react';
-import {useStore, readJSON, isNew, slugify} from '../store';
+import {useStore, isNew, slugify} from '../store';
 import {Link, ProductRail, ProductCarousel, ProductGrid, SectionHead} from '../components';
 
 const bannerDefaults = [
@@ -29,7 +29,7 @@ const socialDefaults = [
 ];
 
 function Hero() {
-  const saved = readJSON('fm-banners', null);
+  const saved = useStore().content.banners;
   const slides = [bannerDefaults[0], ...(saved || bannerDefaults.slice(1))].filter(b => b.active !== false);
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -121,8 +121,8 @@ function Testimonials({config}) {
 }
 
 function Social() {
-  const {settings} = useStore();
-  const items = (readJSON('fm-social', null) || socialDefaults).filter(x => x.active !== false);
+  const {settings, content} = useStore();
+  const items = (content.social || socialDefaults).filter(x => x.active !== false);
   return <section className="sf-section sf-social-strip">
     <SectionHead eyebrow="@flairmantra" title="Seen on Instagram" link={settings.instagram} linkLabel="Follow us"/>
     <div className="sf-insta">{items.map(s => <a key={s.id} href={settings.instagram} target="_blank" rel="noreferrer" className="sf-insta-tile">
@@ -133,8 +133,8 @@ function Social() {
 }
 
 export default function Home() {
-  const {products, recent, findProduct} = useStore();
-  const config = {...sectionDefaults, ...readJSON('fm-home-sections', {})};
+  const {products, recent, findProduct, content} = useStore();
+  const config = {...sectionDefaults, ...(content['home-sections'] || {})};
   const pick = key => {
     const s = config[key];
     if (!s || s.active === false) return [];

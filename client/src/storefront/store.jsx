@@ -91,19 +91,24 @@ async function serverAuth(action, body) {
   return d;
 }
 
+const CONTENT_KEYS = ['products', 'categories', 'site-settings', 'banners', 'home-sections', 'header-menu', 'social', 'pages', 'store-settings', 'page-layouts'];
+
 const StoreCtx = createContext(null);
 export const useStore = () => useContext(StoreCtx);
 
 export function StoreProvider({children}) {
   const [route, setRoute] = useState(location.pathname + location.search);
-  const [products, setProducts] = useState(() => readJSON('fm-products', null) || clientCatalog.products);
-  const [categories, setCategories] = useState(() => readJSON('fm-categories', null) || clientCatalog.categories);
-  const [settings] = useState(() => {
-    const s = {...siteDefaults, ...readJSON('fm-site-settings', {})};
+  const [content, setContent] = useState(() => readJSON('fm-store-cache', null));
+  const [loaded, setLoaded] = useState(() => !!readJSON('fm-store-cache', null));
+  const products = content?.products?.length ? content.products : clientCatalog.products;
+  const categories = content?.categories?.length ? content.categories : clientCatalog.categories;
+  const settings = useMemo(() => {
+    const s = {...siteDefaults, ...(content?.['site-settings'] || {})};
     // The stock logos carry lots of transparent padding; use the tightly cropped version instead.
     if (!s.logoUrl || /^\/flairmantra-logo(-official|-transparent)?\.png$/.test(s.logoUrl)) s.logoUrl = siteDefaults.logoUrl;
     return s;
-  });
+  }, [content]);
+  const freeShipping = Number(content?.['store-settings']?.freeShipping) || FREE_SHIPPING;
   const [cart, setCart] = useState(() => readJSON('fm-cart', []));
   const [wishlist, setWishlist] = useState(() => readJSON('fm-wishlist', []));
   const [recent, setRecent] = useState(() => readJSON('fm-recently-viewed', []));
@@ -113,15 +118,28 @@ export function StoreProvider({children}) {
   const [toast, setToast] = useState(null);
 
   useEffect(() => writeJSON('fm-cart', cart), [cart]);
+  // Keep the bag in step with the latest prices and drop items the store has removed or hidden.
+  useEffect(() => {
+    if (!loaded) return;
+    setCart(c => {
+      const next = c.flatMap(i => {
+        const p = products.find(x => pid(x) === String(i.id));
+        return p && (p.status || 'active') === 'active' ? [{...i, name: p.name, price: Number(p.price)}] : [];
+      });
+      return JSON.stringify(next) === JSON.stringify(c) ? c : next;
+    });
+  }, [loaded, products]);
   useEffect(() => writeJSON('fm-wishlist', wishlist), [wishlist]);
   useEffect(() => writeJSON('fm-recently-viewed', recent), [recent]);
   useEffect(() => { user ? writeJSON('fm-customer', user) : localStorage.removeItem('fm-customer'); }, [user]);
 
+  // Store content comes from the server (edited in the admin panel). A cached copy renders instantly on
+  // repeat visits; without a database (local development) the admin's browser data is used instead.
   useEffect(() => {
-    fetch(`${API}/store`).then(r => (r.ok ? r.json() : Promise.reject())).then(d => {
-      if (d.products?.length) setProducts(cur => [...cur, ...d.products.filter(p => !cur.some(x => pid(x) === pid(p)))]);
-      if (d.categories?.length) setCategories(cur => [...cur, ...d.categories.filter(c => !cur.some(x => pid(x) === pid(c)))]);
-    }).catch(() => {});
+    const local = () => Object.fromEntries(CONTENT_KEYS.map(k => [k, readJSON(`fm-${k}`, null)]));
+    fetch(`${API}/store`, {signal: AbortSignal.timeout(10000)}).then(r => (r.ok ? r.json() : Promise.reject())).then(d => {
+      if (d.database) { setContent(d); writeJSON('fm-store-cache', d); } else setContent(local());
+    }).catch(() => setContent(c => c || local())).finally(() => setLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -201,7 +219,7 @@ export function StoreProvider({children}) {
   }), [user]);
 
   const value = {
-    route, go, products: liveProducts, allProducts: products, categories, settings, findProduct,
+    route, go, products: liveProducts, allProducts: products, categories, settings, findProduct, content: content || {}, loaded, freeShipping,
     cart, setCart, addToCart, updateQty, removeFromCart, cartOpen, setCartOpen,
     cartCount: cart.reduce((a, i) => a + i.qty, 0), subtotal: cart.reduce((a, i) => a + Number(i.price) * i.qty, 0),
     wishlist, toggleWish, recent, trackView, quickView, setQuickView, toast, notify, user, auth

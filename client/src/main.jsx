@@ -22,7 +22,7 @@ function Designed({pageKey, mode = 'replace', children}) {
   return <>{<PageSections blocks={layout.blocks}/>}{mode === 'above' && children}</>;
 }
 
-// The admin panel is the previous app, loaded (with its own stylesheet) only on /admin.
+// The admin panel is loaded (with its own stylesheet) only on /admin.
 const LegacyAdmin = lazy(() => import('./legacy/LegacyApp'));
 
 function Router() {
@@ -52,10 +52,15 @@ function Router() {
 const root = createRoot(document.getElementById('root'));
 if (location.pathname.startsWith('/admin/builder')) {
   // The page builder runs outside the admin panel's stylesheet, like Elementor's full-screen editor.
-  root.render(<Suspense fallback={null}><PageBuilder/></Suspense>);
+  // It loads and saves through the same server sync as the admin panel.
+  import('./legacy/adminSync').then(m => m.bootstrap()).then(state => {
+    if (state === 'login') location.replace('/admin');
+    else root.render(<Suspense fallback={null}><PageBuilder/></Suspense>);
+  });
 } else if (location.pathname.startsWith('/admin')) {
   document.documentElement.classList.add('fm-admin');
-  root.render(<Suspense fallback={null}><LegacyAdmin/></Suspense>);
+  // Load the store's data from the server first, so the admin always edits the live data.
+  import('./legacy/adminSync').then(m => m.bootstrap()).finally(() => root.render(<Suspense fallback={null}><LegacyAdmin/></Suspense>));
 } else {
   root.render(<StoreProvider><Router/></StoreProvider>);
 }

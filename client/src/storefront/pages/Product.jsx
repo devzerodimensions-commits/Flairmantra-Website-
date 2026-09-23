@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {ShoppingBag, Zap, Truck, RotateCcw, ShieldCheck, ChevronDown, Ruler, X, Minus, Plus, Share2, PackageSearch} from 'lucide-react';
-import {useStore, pid, money, groupOf, FREE_SHIPPING} from '../store';
+import {useStore, pid, money, groupOf} from '../store';
 import {Breadcrumbs, Price, Badges, WishButton, ColorPicker, SizePicker, useVariants, ProductRail, Empty} from '../components';
 
 const sizeChart = [['XS', '32', '26', '35'], ['S', '34', '28', '37'], ['M', '36', '30', '39'], ['L', '38', '32', '41'], ['XL', '40', '34', '43'], ['2XL', '42', '36', '45'], ['3XL', '44', '38', '47'], ['4XL', '46', '40', '49']];
@@ -25,14 +25,14 @@ function SizeGuide({close}) {
 }
 
 export default function Product({id}) {
-  const {findProduct, products, addToCart, trackView, recent, go, notify} = useStore();
+  const {findProduct, products, addToCart, trackView, recent, go, notify, freeShipping} = useStore();
   const p = findProduct(id);
   useEffect(() => { if (p) { trackView(p); document.title = `${p.metaTitle || p.name} | FlairMantra`; } }, [id]);
   if (!p) return <div className="sf-wrap"><Empty icon={PackageSearch} title="This style isn’t available" text="It may have sold out or been removed." action="Browse all styles" to="/shop"/></div>;
-  return <ProductView p={p} key={pid(p)} products={products} addToCart={addToCart} recent={recent} findProduct={findProduct} go={go} notify={notify}/>;
+  return <ProductView p={p} key={pid(p)} freeShipping={freeShipping} products={products} addToCart={addToCart} recent={recent} findProduct={findProduct} go={go} notify={notify}/>;
 }
 
-function ProductView({p, products, addToCart, recent, findProduct, go, notify}) {
+function ProductView({p, freeShipping, products, addToCart, recent, findProduct, go, notify}) {
   const v = useVariants(p);
   const [qty, setQty] = useState(1);
   const [err, setErr] = useState(false);
@@ -69,7 +69,7 @@ function ProductView({p, products, addToCart, recent, findProduct, go, notify}) 
         <p className="sf-card-cat">{p.brand || 'FlairMantra'} · {p.subcategory || p.category}</p>
         <h1>{p.name}</h1>
         <Price p={p} size="lg"/>
-        <p className="sf-muted sf-small">Prices in CAD · Free shipping over {money(FREE_SHIPPING)}</p>
+        <p className="sf-muted sf-small">Prices in CAD · Free shipping over {money(freeShipping)}</p>
 
         <div className="sf-field-label">Colour: <b>{v.color}</b></div>
         <ColorPicker colors={v.colors} value={v.color} onChange={v.setColor}/>
@@ -105,7 +105,7 @@ function ProductView({p, products, addToCart, recent, findProduct, go, notify}) 
           </ul>
         </Accordion>
         <Accordion title="Fabric & care"><p>{p.fabric || 'Premium occasion-wear fabric'}. Dry clean recommended for embellished pieces. Store folded in a breathable garment bag, away from direct sunlight.</p></Accordion>
-        <Accordion title="Shipping & returns"><p>Free shipping within Canada on orders over {money(FREE_SHIPPING)}; otherwise a flat fee applies at checkout. Returns are accepted within 15 days of delivery for unworn items with tags attached. Your first size exchange is free.</p></Accordion>
+        <Accordion title="Shipping & returns"><p>Free shipping within Canada on orders over {money(freeShipping)}; otherwise a flat fee applies at checkout. Returns are accepted within 15 days of delivery for unworn items with tags attached. Your first size exchange is free.</p></Accordion>
         <button className="sf-text-btn sf-share" onClick={share}><Share2/> Share this style</button>
       </section>
     </div>

@@ -1,14 +1,15 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {Search, UserRound, Heart, ShoppingBag, Menu, X, ChevronDown, ChevronRight, Home, LayoutGrid, Truck, Trash2, Minus, Plus, Instagram, Facebook, Youtube, ArrowRight, ShieldCheck, RotateCcw, Mail, Phone, MapPin} from 'lucide-react';
-import {useStore, money, pid, productUrl, collections, inCollection, groupOf, readJSON, FREE_SHIPPING, slugify} from './store';
+import {useStore, API, money, pid, productUrl, collections, inCollection, groupOf, slugify} from './store';
 import {Link, QuickView} from './components';
 
 function useMenu() {
+  const {content} = useStore();
   return useMemo(() => {
-    const saved = readJSON('fm-header-menu', null);
+    const saved = content['header-menu'];
     const items = saved?.length ? saved.filter(x => x.active !== false).map(x => ({label: x.label, to: x.url || '/'})) : [{label: 'Shop All', to: '/shop'}, ...collections.map(c => ({label: c.name, to: `/category/${c.slug}`}))];
     return items.filter(x => !['/about', '/contact'].includes(x.to));
-  }, []);
+  }, [content]);
 }
 
 function MegaPanel({slug, close}) {
@@ -129,10 +130,10 @@ export function Header() {
 }
 
 export function CartDrawer() {
-  const {cart, cartOpen, setCartOpen, updateQty, removeFromCart, subtotal, cartCount, go} = useStore();
+  const {cart, cartOpen, setCartOpen, updateQty, removeFromCart, subtotal, cartCount, go, freeShipping} = useStore();
   useEffect(() => { document.body.classList.toggle('sf-lock', cartOpen); const k = e => e.key === 'Escape' && setCartOpen(false); addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [cartOpen]);
   if (!cartOpen) return null;
-  const left = Math.max(0, FREE_SHIPPING - subtotal);
+  const left = Math.max(0, freeShipping - subtotal);
   return <>
     <div className="sf-overlay" onClick={() => setCartOpen(false)}/>
     <aside className="sf-drawer sf-drawer-right" aria-label="Shopping bag">
@@ -140,7 +141,7 @@ export function CartDrawer() {
       {!cart.length ? <div className="sf-empty sf-empty-sm"><div className="sf-empty-icon"><ShoppingBag/></div><h2>Your bag is empty</h2><p>Let’s find something you’ll love.</p><button className="sf-btn" onClick={() => go('/shop')}>Start shopping</button></div> : <>
         <div className="sf-ship-meter">
           <p>{left > 0 ? <>You’re <b>{money(left)}</b> away from free shipping</> : <><Truck/> You’ve unlocked <b>free shipping</b></>}</p>
-          <div><i style={{width: `${Math.min(100, subtotal / FREE_SHIPPING * 100)}%`}}/></div>
+          <div><i style={{width: `${Math.min(100, subtotal / freeShipping * 100)}%`}}/></div>
         </div>
         <div className="sf-drawer-items">
           {cart.map(i => <div className="sf-line" key={i.cartKey}>
@@ -187,8 +188,7 @@ function Newsletter() {
   const submit = e => {
     e.preventDefault();
     const email = new FormData(e.currentTarget).get('email');
-    const list = readJSON('fm-newsletter', []);
-    try { localStorage.setItem('fm-newsletter', JSON.stringify([...new Set([...list, email])])); } catch { /* ignore */ }
+    fetch(`${API}/newsletter`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email})}).catch(() => {});
     setDone(true);
   };
   return <section className="sf-newsletter">
@@ -200,12 +200,12 @@ function Newsletter() {
 }
 
 export function Footer() {
-  const {settings} = useStore();
+  const {settings, freeShipping} = useStore();
   const tel = n => `tel:${String(n).replace(/\D/g, '')}`;
   return <>
     <section className="sf-promises">
       <div className="sf-wrap">
-        {[[Truck, 'Free shipping', `On Canadian orders over ${money(FREE_SHIPPING)}`], [RotateCcw, '15-day returns', 'Easy returns & first size exchange free'], [ShieldCheck, 'Secure checkout', 'Your details are always protected'], [Phone, 'Stylist on call', `${settings.hours} · ${settings.phone1}`]].map(([I, t, s]) => <div key={t}><I/><span><b>{t}</b><small>{s}</small></span></div>)}
+        {[[Truck, 'Free shipping', `On Canadian orders over ${money(freeShipping)}`], [RotateCcw, '15-day returns', 'Easy returns & first size exchange free'], [ShieldCheck, 'Secure checkout', 'Your details are always protected'], [Phone, 'Stylist on call', `${settings.hours} · ${settings.phone1}`]].map(([I, t, s]) => <div key={t}><I/><span><b>{t}</b><small>{s}</small></span></div>)}
       </div>
     </section>
     <Newsletter/>
@@ -235,9 +235,10 @@ export function Footer() {
 }
 
 export function Shell({children}) {
+  const {loaded} = useStore();
   return <div className="sf">
     <Header/>
-    <main className="sf-main">{children}</main>
+    <main className="sf-main">{loaded ? children : <div className="sf-loading" role="status" aria-label="Loading"><span/></div>}</main>
     <Footer/>
     <CartDrawer/>
     <QuickView/>

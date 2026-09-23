@@ -57,16 +57,17 @@ function AuthForms() {
 
 function useMyOrders() {
   const {user} = useStore();
-  const [orders, setOrders] = useState(() => readJSON('fm-orders', []).filter(o => String(o.email).toLowerCase() === user.email.toLowerCase()));
+  const mine = () => {
+    const seen = new Set();
+    return [...readJSON('fm-my-orders', []), ...readJSON('fm-orders', [])].filter(o => String(o.email).toLowerCase() === user.email.toLowerCase() && !seen.has(o.id) && seen.add(o.id));
+  };
+  const [orders, setOrders] = useState(mine);
   useEffect(() => {
     if (!user.token) return;
     fetch(`${API}/customers/orders`, {headers: {Authorization: `Bearer ${user.token}`}}).then(r => (r.ok ? r.json() : [])).then(list => {
       if (!Array.isArray(list)) return;
-      setOrders(cur => {
-        const merged = [...cur];
-        list.forEach(o => { const id = o.orderNumber || o.id; if (!merged.some(x => x.id === id)) merged.push({...o, id, date: o.createdAt}); });
-        return merged.sort((a, b) => new Date(b.date) - new Date(a.date));
-      });
+      // The server has the latest status for every order, so its copy wins.
+      setOrders(cur => [...list, ...cur.filter(x => !list.some(o => o.id === x.id))].sort((a, b) => new Date(b.date) - new Date(a.date)));
     }).catch(() => {});
   }, [user.token]);
   return orders;
@@ -154,7 +155,16 @@ export function TrackOrderPage() {
   const initial = new URLSearchParams(route.split('?')[1] || '').get('id') || '';
   const [q, setQ] = useState(initial);
   const [order, setOrder] = useState(undefined);
-  const find = id => { const key = String(id).trim().replace(/^#/, '').toUpperCase(); setOrder(readJSON('fm-orders', []).find(o => String(o.id).toUpperCase() === key) || null); };
+  const find = async id => {
+    const key = String(id).trim().replace(/^#/, '').toUpperCase();
+    const local = () => [...readJSON('fm-my-orders', []), ...readJSON('fm-orders', [])].find(o => String(o.id).toUpperCase() === key) || null;
+    try {
+      const r = await fetch(`${API}/orders/${encodeURIComponent(key)}/track`, {signal: AbortSignal.timeout(10000)});
+      if (r.ok) { setOrder(await r.json()); return; }
+      if (r.status === 404 && !import.meta.env.DEV) { setOrder(null); return; }
+    } catch { /* server unreachable: fall back to this browser's copy */ }
+    setOrder(local());
+  };
   useEffect(() => { document.title = 'Track order | FlairMantra'; if (initial) find(initial); }, [initial]);
   const current = order ? stages.indexOf(order.status) : -1;
   return <div className="sf-wrap sf-track">

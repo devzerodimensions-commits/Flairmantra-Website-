@@ -1,22 +1,46 @@
 import React, {useEffect, useState} from 'react';
 import {ShoppingBag, Trash2, Minus, Plus, Tag, ShieldCheck, Lock, Truck, CheckCircle2, ArrowRight, Heart, Package} from 'lucide-react';
-import {useStore, API, money, readJSON, writeJSON, couponDiscount, FREE_SHIPPING, SHIPPING_FEE} from '../store';
+import {useStore, API, money, readJSON, writeJSON, couponDiscount, SHIPPING_FEE} from '../store';
 import {Breadcrumbs, Empty, Link, ProductRail} from '../components';
 
 const provinces = ['Alberta', 'British Columbia', 'Manitoba', 'New Brunswick', 'Newfoundland and Labrador', 'Northwest Territories', 'Nova Scotia', 'Nunavut', 'Ontario', 'Prince Edward Island', 'Quebec', 'Saskatchewan', 'Yukon'];
 
+const cartLines = cart => cart.map(i => ({id: i.id, qty: i.qty, name: i.name, size: i.size, selectedColor: i.selectedColor, image: i.image, cartKey: i.cartKey}));
+
+// Coupons are checked by the server, which knows the real codes and how often each has been used.
+async function checkCoupon(code, cart) {
+  try {
+    const r = await fetch(`${API}/coupons/validate`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code, items: cartLines(cart)}), signal: AbortSignal.timeout(10000)});
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) return {code: d.code, discount: d.discount, freeShipping: d.freeShipping};
+    if (r.status !== 404) throw new Error(d.message || 'This code is invalid, expired, or doesn’t apply to your bag.');
+  } catch (e) { if (!(e instanceof TypeError) && e.name !== 'TimeoutError') throw e; }
+  if (!import.meta.env.DEV) throw new Error('We couldn’t check this code right now. Please try again.');
+  const found = readJSON('fm-coupons', []).find(c => c.code === code.trim().toUpperCase()); // local development without a server
+  const subtotal = cart.reduce((a, i) => a + i.price * i.qty, 0);
+  const discount = couponDiscount(found, cart, subtotal);
+  if (!discount) throw new Error('This code is invalid, expired, or doesn’t apply to your bag.');
+  return {code: found.code, discount, freeShipping: !!found.freeShipping};
+}
+
 function useCoupon() {
-  const {cart, subtotal} = useStore();
+  const {cart, subtotal, freeShipping} = useStore();
   const [coupon, setCoupon] = useState(() => readJSON('fm-applied-coupon', null, 'session'));
   const [msg, setMsg] = useState(null);
-  const discount = couponDiscount(coupon, cart, subtotal);
-  const apply = code => {
-    const found = readJSON('fm-coupons', []).find(c => c.code === code.trim().toUpperCase());
-    if (!found || !couponDiscount(found, cart, subtotal)) { setMsg({error: true, text: 'This code is invalid, expired, or doesn’t apply to your bag.'}); return; }
-    setCoupon(found); writeJSON('fm-applied-coupon', found, 'session'); setMsg({text: `Code ${found.code} applied.`});
+  const save = c => { setCoupon(c); c ? writeJSON('fm-applied-coupon', c, 'session') : sessionStorage.removeItem('fm-applied-coupon'); };
+  const apply = async code => {
+    setMsg(null);
+    try { const c = await checkCoupon(code, cart); save(c); setMsg({text: `Code ${c.code} applied.`}); } catch (e) { setMsg({error: true, text: e.message}); }
   };
-  const remove = () => { setCoupon(null); sessionStorage.removeItem('fm-applied-coupon'); setMsg(null); };
-  const shipping = coupon?.freeShipping || subtotal >= FREE_SHIPPING ? 0 : SHIPPING_FEE;
+  // Re-check when the bag changes, since the discount depends on what's in it.
+  const cartSig = cart.map(i => `${i.cartKey}:${i.qty}`).join('|');
+  useEffect(() => {
+    if (!coupon?.code || !cart.length) return;
+    checkCoupon(coupon.code, cart).then(save).catch(e => { save(null); setMsg({error: true, text: e.message}); });
+  }, [cartSig]);
+  const remove = () => { save(null); setMsg(null); };
+  const discount = Math.min(subtotal, Number(coupon?.discount || 0));
+  const shipping = coupon?.freeShipping || subtotal >= freeShipping ? 0 : SHIPPING_FEE;
   return {coupon, discount, apply, remove, msg, shipping, total: Math.max(0, subtotal - discount) + shipping};
 }
 
@@ -30,12 +54,12 @@ function CouponBox({c}) {
 }
 
 function Totals({c}) {
-  const {subtotal} = useStore();
+  const {subtotal, freeShipping} = useStore();
   return <div className="sf-totals">
     <div className="sf-row"><span>Subtotal</span><span>{money(subtotal)}</span></div>
     {c.discount > 0 && <div className="sf-row sf-success"><span>Discount ({c.coupon.code})</span><span>−{money(c.discount)}</span></div>}
     <div className="sf-row"><span>Shipping</span><span>{c.shipping ? money(c.shipping) : 'Free'}</span></div>
-    {c.shipping > 0 && <small className="sf-muted">Add {money(FREE_SHIPPING - subtotal)} more for free shipping.</small>}
+    {c.shipping > 0 && <small className="sf-muted">Add {money(freeShipping - subtotal)} more for free shipping.</small>}
     <div className="sf-row sf-total"><span>Total</span><span><small>CAD</small> {money(c.total)}</span></div>
   </div>;
 }
@@ -79,7 +103,7 @@ export function CartPage() {
 }
 
 export function CheckoutPage() {
-  const {cart, setCart, subtotal, go, user} = useStore();
+  const {cart, setCart, subtotal, go, user, settings} = useStore();
   const c = useCoupon();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -93,22 +117,33 @@ export function CheckoutPage() {
     setError('');
     const f = Object.fromEntries(new FormData(e.currentTarget));
     if (!/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(f.postal.trim())) { setError('Please enter a valid Canadian postal code, e.g. L1Z 0L2.'); return; }
-    const orders = readJSON('fm-orders', []);
-    if (c.discount && c.coupon?.usagePerUser && orders.filter(o => o.couponCode === c.coupon.code && String(o.email).toLowerCase() === f.email.toLowerCase()).length >= Number(c.coupon.usagePerUser)) { setError('This email has already used this coupon the maximum number of times.'); return; }
     setBusy(true);
-    const now = new Date().toISOString();
     const postal = f.postal.trim().toUpperCase().replace(/^(\w{3})\s*-?\s*(\w{3})$/, '$1 $2');
-    const order = {
-      id: 'FM' + Date.now().toString().slice(-8), customer: `${f.firstName} ${f.lastName}`.trim(), email: f.email.trim(), phone: f.phone,
+    const request = {
+      customer: `${f.firstName} ${f.lastName}`.trim(), email: f.email.trim(), phone: f.phone, notes: f.notes || '', payment: f.payment,
       address: `${f.address}${f.apt ? ', ' + f.apt : ''}, ${f.city}, ${f.province} ${postal}`,
-      items: cart, subtotal, discount: c.discount, shipping: c.shipping, total: c.total, couponCode: c.discount ? c.coupon.code : '', notes: f.notes || '',
-      status: 'Processing', payment: f.payment, date: now, customerId: user?.id || '', location: 'Order received',
-      customerMessage: 'Your order has been received and is being prepared.',
-      trackingHistory: [{status: 'Processing', location: 'Order received', message: 'Your order has been received and is being prepared.', date: now}]
+      couponCode: c.discount ? c.coupon.code : '', items: cartLines(cart)
     };
-    writeJSON('fm-orders', [order, ...orders]);
-    if (c.discount) { writeJSON('fm-coupons', readJSON('fm-coupons', []).map(x => (x.code === c.coupon.code ? {...x, used: Number(x.used || 0) + 1} : x))); sessionStorage.removeItem('fm-applied-coupon'); }
-    await fetch(`${API}/orders`, {method: 'POST', headers: {'Content-Type': 'application/json', ...(user?.token ? {Authorization: `Bearer ${user.token}`} : {})}, body: JSON.stringify(order), signal: AbortSignal.timeout(6000)}).catch(() => {});
+    let order;
+    try {
+      const r = await fetch(`${API}/orders`, {method: 'POST', headers: {'Content-Type': 'application/json', ...(user?.token ? {Authorization: `Bearer ${user.token}`} : {})}, body: JSON.stringify(request), signal: AbortSignal.timeout(20000)});
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw Object.assign(new Error(d.message || 'We couldn’t place your order.'), {server: r.status !== 503});
+      order = d;
+    } catch (err) {
+      if (err.server || !import.meta.env.DEV) {
+        setError(err.server ? err.message : `We couldn’t place your order right now. Please try again, or call us at ${settings.phone1}.`);
+        setBusy(false);
+        return;
+      }
+      // Local development without a database: keep the order in this browser so the flow can still be tested.
+      const now = new Date().toISOString();
+      order = {...request, id: 'FM' + Date.now().toString().slice(-8), items: cart, subtotal, discount: c.discount, shipping: c.shipping, total: c.total, status: 'Processing', date: now, location: 'Order received',
+        customerMessage: 'Your order has been received and is being prepared.', trackingHistory: [{status: 'Processing', location: 'Order received', message: 'Your order has been received and is being prepared.', date: now}]};
+      writeJSON('fm-orders', [order, ...readJSON('fm-orders', [])]);
+    }
+    writeJSON('fm-my-orders', [order, ...readJSON('fm-my-orders', [])].slice(0, 50));
+    sessionStorage.removeItem('fm-applied-coupon');
     setCart([]);
     go(`/order-success?id=${order.id}`);
   };
@@ -159,7 +194,7 @@ export function CheckoutPage() {
 export function OrderSuccess() {
   const {route, user} = useStore();
   const id = new URLSearchParams(route.split('?')[1] || '').get('id');
-  const order = readJSON('fm-orders', []).find(o => o.id === id);
+  const order = [...readJSON('fm-my-orders', []), ...readJSON('fm-orders', [])].find(o => o.id === id);
   useEffect(() => { document.title = 'Order confirmed | FlairMantra'; }, []);
   return <div className="sf-wrap sf-done">
     <div className="sf-success-icon"><CheckCircle2/></div>

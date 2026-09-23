@@ -11,7 +11,13 @@ services:
         value: 22
       - key: JWT_SECRET
         generateValue: true
-      - key: MONGODB_URI
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
         sync: false
       - key: CLIENT_URL
         sync: false
