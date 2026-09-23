@@ -1,0 +1,24 @@
+/* Builder preview overlays: section outlines, toolbars and "+" inserters */
+.pbx-mode .sf-tabbar { display: none !important; }
+.pbx { min-height: 60vh; }
+.pbx-block { position: relative; outline: 2px solid transparent; outline-offset: -2px; transition: outline-color .12s; cursor: pointer; }
+.pbx-block:hover { outline-color: rgba(196, 154, 63, .7); }
+.pbx-block.on { outline-color: #8a1c35; }
+.pbx-toolbar { position: absolute; top: 0; right: 0; z-index: 30; display: none; align-items: center; gap: 2px; padding: 3px; background: #8a1c35; color: #fff; border-radius: 0 0 0 8px; font: 500 12px/1 'Jost', system-ui, sans-serif; box-shadow: 0 4px 12px rgba(0, 0, 0, .2); }
+.pbx-block:hover > .pbx-toolbar, .pbx-block.on > .pbx-toolbar { display: flex; }
+.pbx-block:not(.on):hover > .pbx-toolbar { background: #c49a3f; color: #17130f; }
+.pbx-toolbar span { padding: 0 8px; white-space: nowrap; }
+.pbx-toolbar button { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
+.pbx-toolbar button:hover:not(:disabled) { background: rgba(255, 255, 255, .2); }
+.pbx-toolbar button:disabled { opacity: .35; cursor: default; }
+.pbx-toolbar svg { width: 15px; height: 15px; }
+.pbx-insert { position: absolute; left: 0; right: 0; bottom: -14px; z-index: 31; display: flex; justify-content: center; opacity: 0; transition: opacity .12s; pointer-events: none; }
+.pbx-block > .pbx-insert:first-child { top: -14px; bottom: auto; }
+.pbx-block:hover > .pbx-insert, .pbx-block.on > .pbx-insert { opacity: 1; pointer-events: auto; }
+.pbx-insert button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; background: #8a1c35; color: #fff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
+.pbx-insert button:hover { background: #6f1329; transform: scale(1.1); }
+.pbx-insert svg { width: 16px; height: 16px; }
+.pbx-empty { margin: 48px auto; max-width: 520px; padding: 48px 24px; border: 2px dashed #e2d9cb; border-radius: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #6f675d; }
+.pbx-empty > svg { width: 40px; height: 40px; color: #c49a3f; }
+.pbx-empty h2 { font-size: 30px; color: #17130f; }
+.pbx-placeholder { margin: 24px auto; max-width: 1256px; padding: 40px; border: 2px dashed #e2d9cb; border-radius: 12px; text-align: center; color: #6f675d; }

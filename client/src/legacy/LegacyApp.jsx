@@ -176,14 +176,14 @@ function Admin(){
   {id:'orders',icon:ShoppingCart,label:'Orders',items:[['orders','All Orders'],['customers','Customers'],['tracking','Delivery Updates'],['coupons','Coupons']]},
   {id:'products',icon:Package,label:'Products',items:[['products','All Products'],['inventory','Inventory'],['categories','Categories'],['tags','Product Labels'],['brands','Brands'],['reviews','Reviews'],['bulk','Import Products']]},
   {id:'media',icon:ImageIcon,label:'Media',items:[['media','Library']]},
-  {id:'pages',icon:FileText,label:'Pages',items:[['pages','All Pages']]},
+  {id:'pages',icon:FileText,label:'Pages',items:[['pages','All Pages'],['builder','Page Builder']]},
   {id:'inquiries',icon:MessageSquare,label:'Messages',items:[['inquiries','Customer Messages']]},
   {sep:true},
   {id:'appearance',icon:Palette,label:'Appearance',items:[['settings','Customize'],['home-sections','Home Sections'],['menus','Menus'],['social','Social Media']]},
   {id:'users',icon:Users,label:'Users',items:[['users','Team Members']]},
   {id:'store',icon:Settings,label:'Settings',items:[['store','Store Details']]}
  ];
- const pick=id=>{setTab(id);setWpMenuOpen(false);scrollTo(0,0)};
+ const pick=id=>{if(id==='builder'){location.href='/admin/builder?page=home';return}setTab(id);setWpMenuOpen(false);scrollTo(0,0)};
  const adminEmail=sessionStorage.getItem('fm-admin-user')||'admin';
  const signOut=()=>{sessionStorage.clear();setAuth(false)};
  return <div className={`admin-shell wp-shell ${wpFolded?'folded':''} ${wpMenuOpen?'menu-open':''}`}>
