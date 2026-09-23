@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {ArrowRight, ChevronLeft, ChevronRight, Instagram, Play, Quote} from 'lucide-react';
 import {useStore, readJSON, isNew, slugify} from '../store';
-import {Link, ProductRail, ProductGrid, SectionHead} from '../components';
+import {Link, ProductRail, ProductCarousel, ProductGrid, SectionHead} from '../components';
 
 const bannerDefaults = [
   {id: 'hero-wedding', eyebrow: 'The Wedding Edit 2026', title: 'Tradition, reimagined.', copy: 'Heirloom-worthy lehengas, sarees and sherwanis for every celebration.', image: '/images/wedding-bridal.png', link: '/category/festive-edit', button: 'Shop the edit'},
@@ -146,7 +146,7 @@ export default function Home() {
   return <>
     <Hero/>
     <CategoryStrip/>
-    <ProductRail eyebrow="Just landed" title="New arrivals" items={newIn} link="/category/new-arrivals"/>
+    <ProductCarousel eyebrow="Just landed" title="New arrivals" items={newIn} link="/category/new-arrivals"/>
     <PromoSplit/>
     {pick('navratri').length > 0 && <section className="sf-section"><SectionHead eyebrow={config.navratri.eyebrow} title={config.navratri.title} link={config.navratri.link}/><ProductGrid items={pick('navratri')}/></section>}
     <PriceBands/>
