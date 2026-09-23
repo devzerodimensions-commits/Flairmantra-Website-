@@ -1,0 +1,256 @@
+/* WordPress-style admin theme. Loaded after styles.css and scoped to the admin (html.fm-admin). */
+html.fm-admin {
+  --wp-bar: #1d2327;
+  --wp-menu: #1d2327;
+  --wp-menu-sub: #2c3338;
+  --wp-menu-text: #f0f0f1;
+  --wp-menu-icon: #a7aaad;
+  --wp-highlight: #72aee6;
+  --wp-blue: #2271b1;
+  --wp-blue-dark: #135e96;
+  --wp-bg: #f0f0f1;
+  --wp-border: #c3c4c7;
+  --wp-border-light: #dcdcde;
+  --wp-text: #1d2327;
+  --wp-muted: #646970;
+  --wp-red: #d63638;
+  --wp-green: #00a32a;
+  --wp-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  --admin-font-size: 13px;
+}
+html.fm-admin body { background: var(--wp-bg) !important; font-family: var(--wp-font) !important; }
+
+/* ---------- Frame ---------- */
+html.fm-admin .wp-shell { display: block !important; background: var(--wp-bg) !important; color: var(--wp-text) !important; min-height: 100vh; padding-top: 32px; font: 13px/1.4em var(--wp-font) !important; }
+html.fm-admin .wp-shell * { font-family: var(--wp-font) !important; letter-spacing: normal !important; }
+html.fm-admin .wp-shell svg { font-family: inherit !important; }
+
+html.fm-admin .wp-adminbar { position: fixed; top: 0; left: 0; right: 0; z-index: 99999; height: 32px; display: flex; align-items: stretch; background: var(--wp-bar); color: #f0f0f1; font-size: 13px; }
+html.fm-admin .wp-adminbar a, html.fm-admin .wp-adminbar button { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px; color: #f0f0f1 !important; background: none; border: 0; font-size: 13px !important; text-decoration: none; cursor: pointer; white-space: nowrap; }
+html.fm-admin .wp-adminbar svg { width: 18px; height: 18px; color: var(--wp-menu-icon); }
+html.fm-admin .wp-adminbar > a:hover, html.fm-admin .wp-adminbar > div:hover > button { background: var(--wp-menu-sub); color: var(--wp-highlight) !important; }
+html.fm-admin .wp-adminbar > a:hover svg, html.fm-admin .wp-adminbar > div:hover > button svg { color: var(--wp-highlight); }
+html.fm-admin .wp-bar-toggle { display: none !important; }
+html.fm-admin .wp-bar-site span { font-weight: 400; }
+html.fm-admin .wp-bar-new, html.fm-admin .wp-bar-account { position: relative; }
+html.fm-admin .wp-bar-account { margin-left: auto; }
+html.fm-admin .wp-bar-account > button svg { width: 18px; height: 18px; background: #50575e; border-radius: 2px; padding: 1px; color: #f0f0f1; }
+html.fm-admin .wp-bar-sub { display: none; position: absolute; top: 32px; left: 0; min-width: 160px; background: var(--wp-menu-sub); box-shadow: 0 3px 5px rgba(0, 0, 0, .2); padding: 6px 0; }
+html.fm-admin .wp-bar-account .wp-bar-sub { left: auto; right: 0; }
+html.fm-admin .wp-bar-new:hover .wp-bar-sub, html.fm-admin .wp-bar-new:focus-within .wp-bar-sub,
+html.fm-admin .wp-bar-account:hover .wp-bar-sub, html.fm-admin .wp-bar-account:focus-within .wp-bar-sub { display: block; }
+html.fm-admin .wp-bar-sub button { width: 100%; height: 26px !important; padding: 0 12px !important; color: #c3c4c7 !important; }
+html.fm-admin .wp-bar-sub button:hover { color: var(--wp-highlight) !important; }
+
+/* Left menu */
+html.fm-admin .wp-menu { position: fixed !important; top: 32px !important; bottom: 0 !important; left: 0 !important; inset: 32px auto 0 0 !important; width: 160px !important; padding: 0 !important; background: var(--wp-menu) !important; border: 0 !important; box-shadow: none !important; z-index: 9990; overflow: visible !important; display: block !important; }
+html.fm-admin .wp-menu nav { display: block !important; margin: 12px 0 0 !important; gap: 0 !important; }
+html.fm-admin .wp-menu-sep { height: 5px; margin: 0 0 6px; }
+html.fm-admin .wp-menu-top { position: relative; }
+html.fm-admin .wp-menu .wp-menu-name { display: flex !important; align-items: center; gap: 0 !important; width: 100%; min-height: 34px !important; padding: 0 !important; margin: 0 !important; background: none !important; border: 0 !important; border-radius: 0 !important; color: var(--wp-menu-text) !important; font-size: 14px !important; font-weight: 400 !important; line-height: 18px; text-align: left; cursor: pointer; }
+html.fm-admin .wp-menu .wp-menu-name::before { display: none !important; }
+html.fm-admin .wp-menu .wp-menu-name svg { width: 20px !important; height: 20px !important; margin: 0 8px 0 8px; color: var(--wp-menu-icon); flex: none; }
+html.fm-admin .wp-menu .wp-menu-name span { padding: 8px 8px 8px 0; font-size: 14px !important; }
+html.fm-admin .wp-menu-top:hover > .wp-menu-name, html.fm-admin .wp-menu-top:focus-within > .wp-menu-name { background: var(--wp-menu-sub) !important; color: var(--wp-highlight) !important; }
+html.fm-admin .wp-menu-top:hover > .wp-menu-name svg { color: var(--wp-highlight); }
+html.fm-admin .wp-menu-top.current > .wp-menu-name { background: var(--wp-blue) !important; color: #fff !important; }
+html.fm-admin .wp-menu-top.current > .wp-menu-name svg { color: #fff; }
+html.fm-admin .wp-menu-top.current > .wp-menu-name::after { content: ''; position: absolute; right: 0; top: 9px; border: 8px solid transparent; border-right-color: var(--wp-bg); }
+
+html.fm-admin .wp-submenu { display: none; background: var(--wp-menu-sub); padding: 7px 0 8px; }
+html.fm-admin .wp-menu-top.current .wp-submenu { display: block; }
+html.fm-admin .wp-menu-top:not(.current):hover .wp-submenu, html.fm-admin .wp-menu-top:not(.current):focus-within .wp-submenu { display: block; position: absolute; top: 0; left: 160px; min-width: 160px; z-index: 9999; box-shadow: 0 3px 5px rgba(0, 0, 0, .2); padding: 7px 0 8px; }
+html.fm-admin .wp-submenu-head { display: block; padding: 3px 12px 6px 14px; color: #fff; font-size: 14px; font-weight: 400; }
+html.fm-admin .wp-submenu button { display: block !important; width: 100%; padding: 5px 12px 5px 36px !important; min-height: 0 !important; background: none !important; border: 0 !important; border-radius: 0 !important; color: rgba(240, 246, 252, .7) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 1.4; text-align: left; cursor: pointer; }
+html.fm-admin .wp-menu-top:not(.current) .wp-submenu button { padding-left: 14px !important; }
+html.fm-admin .wp-submenu button:hover, html.fm-admin .wp-submenu button:focus { color: var(--wp-highlight) !important; box-shadow: inset 4px 0 0 0 currentColor; }
+html.fm-admin .wp-submenu button.current { color: #fff !important; font-weight: 600 !important; }
+html.fm-admin .wp-collapse { display: flex !important; align-items: center; gap: 8px !important; width: 100%; padding: 8px !important; margin: 0 !important; background: none !important; border: 0 !important; color: var(--wp-menu-icon) !important; font-size: 13px !important; cursor: pointer; min-height: 0 !important; }
+html.fm-admin .wp-collapse svg { width: 20px !important; height: 20px !important; transform: rotate(90deg); border-radius: 50%; background: transparent; }
+html.fm-admin .wp-collapse:hover { color: var(--wp-highlight) !important; }
+html.fm-admin .wp-menu-backdrop { display: none; }
+
+/* Folded (collapsed) menu */
+html.fm-admin .wp-shell.folded .wp-menu { width: 36px !important; }
+html.fm-admin .wp-shell.folded .wp-menu .wp-menu-name span, html.fm-admin .wp-shell.folded .wp-collapse span { display: none; }
+html.fm-admin .wp-shell.folded .wp-collapse svg { transform: rotate(-90deg); }
+html.fm-admin .wp-shell.folded .wp-menu-top .wp-submenu { display: none; }
+html.fm-admin .wp-shell.folded .wp-menu-top:hover .wp-submenu { display: block; position: absolute; top: 0; left: 36px; min-width: 160px; z-index: 9999; box-shadow: 0 3px 5px rgba(0, 0, 0, .2); }
+html.fm-admin .wp-shell.folded .wp-menu-top.current .wp-submenu-head, html.fm-admin .wp-shell.folded .wp-submenu-head { display: block; }
+html.fm-admin .wp-shell.folded .wp-submenu button { padding-left: 14px !important; }
+html.fm-admin .wp-shell.folded .wp-body { margin-left: 36px !important; }
+
+/* ---------- Content area ---------- */
+html.fm-admin .wp-body { display: block !important; margin-left: 160px !important; padding: 0 20px 65px !important; grid-column: auto !important; color: var(--wp-text); font-size: 13px !important; }
+html.fm-admin .wp-page-head { display: flex !important; align-items: center; flex-wrap: wrap; gap: 10px; height: auto !important; min-height: 0 !important; margin: 0 0 12px !important; padding: 18px 0 4px !important; background: none !important; border: 0 !important; box-shadow: none !important; }
+html.fm-admin .wp-page-head::after { display: none !important; }
+html.fm-admin .wp-page-head h1 { margin: 0 !important; padding: 0 !important; color: var(--wp-text) !important; font: 400 23px/1.3 var(--wp-font) !important; letter-spacing: normal !important; }
+html.fm-admin .wp-title-action { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border: 1px solid var(--wp-blue); border-radius: 3px; background: #f6f7f7; color: var(--wp-blue) !important; font-size: 13px; text-decoration: none; }
+html.fm-admin .wp-title-action:hover { background: #f0f0f1; border-color: var(--wp-blue-dark); color: var(--wp-blue-dark) !important; }
+
+html.fm-admin .wp-body h2, html.fm-admin .wp-body h3, html.fm-admin .wp-body h4 { color: var(--wp-text) !important; font-family: var(--wp-font) !important; letter-spacing: normal !important; }
+html.fm-admin .wp-body h2 { font-size: 1.3em !important; font-weight: 600 !important; line-height: 1.4 !important; }
+html.fm-admin .wp-body h3 { font-size: 1.1em !important; font-weight: 600 !important; }
+html.fm-admin .wp-body p, html.fm-admin .wp-body span, html.fm-admin .wp-body small { letter-spacing: normal !important; }
+html.fm-admin .wp-body a { color: var(--wp-blue); }
+html.fm-admin .wp-body a:hover { color: var(--wp-blue-dark); }
+
+/* Boxes: WordPress "postbox" look — white, thin grey border, no rounded corners or heavy shadows */
+html.fm-admin .wp-body :is(.admin-panel, .admin-welcome, .easy-stats article, .quick-start article, .complete-home-card, .home-preview-toolbar, .settings-group, .menu-manager, .pages-panel, .recent-orders-simple, .setup-guide, .website-settings, .admin-typography-control, .friendly-empty, .products-admin-page, .settings-preview, .menu-admin-list > *, .page-list-row, .testimonial-admin, .dash-grid > *, .stat-grid > *, .manager > section, .coupon-card, .products-admin-title) {
+  background: #fff !important; border: 1px solid var(--wp-border) !important; border-radius: 0 !important; box-shadow: 0 1px 1px rgba(0, 0, 0, .04) !important; color: var(--wp-text) !important;
+}
+html.fm-admin .wp-body :is(.admin-panel, .admin-welcome, .complete-home-card, .settings-group, .setup-guide, .recent-orders-simple) { padding: 12px 16px !important; margin-bottom: 20px !important; }
+html.fm-admin .wp-body .panel-head { border-bottom: 1px solid var(--wp-border-light) !important; padding-bottom: 10px !important; margin-bottom: 12px !important; }
+html.fm-admin .wp-body .panel-head p { color: var(--wp-muted) !important; font-size: 13px !important; text-transform: none !important; }
+html.fm-admin .wp-body :is(.admin-kicker, .easy-title p, .admin-welcome > div > p:first-child, .panel-head > p:first-child) { color: var(--wp-muted) !important; font-size: 12px !important; text-transform: none !important; }
+
+/* Dashboard: WordPress welcome panel + "At a glance" boxes */
+html.fm-admin .wp-body .admin-welcome { display: flex !important; align-items: center; justify-content: space-between; gap: 20px; padding: 23px 24px !important; border-left: 4px solid var(--wp-blue) !important; }
+html.fm-admin .wp-body .admin-welcome h2 { font-size: 21px !important; font-weight: 400 !important; margin: 4px 0 6px !important; }
+html.fm-admin .wp-body .admin-welcome p { color: var(--wp-muted) !important; }
+html.fm-admin .wp-body .admin-welcome p:first-child { color: var(--wp-blue) !important; font-weight: 600; text-transform: uppercase !important; font-size: 11px !important; }
+html.fm-admin .wp-body .easy-stats article > svg, html.fm-admin .wp-body .quick-start article > svg { background: #f0f6fc !important; color: var(--wp-blue) !important; border-radius: 50% !important; }
+html.fm-admin .wp-body .easy-stats strong { color: var(--wp-text) !important; font-weight: 400 !important; font-size: 26px !important; }
+html.fm-admin .wp-body .quick-start article:hover { border-color: var(--wp-blue) !important; box-shadow: 0 0 0 1px var(--wp-blue) !important; }
+
+/* Buttons */
+html.fm-admin .wp-body :is(.btn.dark, .admin-primary, .add-btn, .admin-save-bar button, .quick-start article > button, .admin-add-review, .builder-save, .add-page-main, .add-menu-item, .done-editing, .settings-savebar button, .open-home-builder, .admin-welcome button, .wp-button-primary),
+html.fm-admin .wp-button-primary {
+  display: inline-flex !important; align-items: center; justify-content: center; gap: 6px; min-height: 32px !important; height: auto !important; padding: 0 12px !important; background: var(--wp-blue) !important; border: 1px solid var(--wp-blue) !important; border-radius: 3px !important; color: #fff !important; font-size: 13px !important; font-weight: 400 !important; line-height: 2.30769231 !important; text-transform: none !important; letter-spacing: normal !important; box-shadow: none !important; cursor: pointer;
+}
+html.fm-admin .wp-body :is(.btn.dark, .admin-primary, .add-btn, .admin-save-bar button, .quick-start article > button, .admin-add-review, .builder-save, .add-page-main, .add-menu-item, .done-editing, .settings-savebar button, .open-home-builder, .admin-welcome button):hover:not(:disabled),
+html.fm-admin .wp-button-primary:hover:not(:disabled) { background: var(--wp-blue-dark) !important; border-color: var(--wp-blue-dark) !important; color: #fff !important; }
+html.fm-admin .wp-body :is(.btn.dark, .admin-primary, .add-btn, .admin-save-bar button, .quick-start article > button) svg { width: 14px !important; height: 14px !important; }
+html.fm-admin .wp-body :is(.view-store, .reset-settings, .restore-static-home, .mobile-preview-button, .section-admin-tabs button, .all-tabs button, .btn:not(.dark)) {
+  min-height: 30px !important; padding: 0 10px !important; background: #f6f7f7 !important; border: 1px solid var(--wp-blue) !important; border-radius: 3px !important; color: var(--wp-blue) !important; font-size: 13px !important; font-weight: 400 !important; text-transform: none !important; letter-spacing: normal !important; box-shadow: none !important;
+}
+html.fm-admin .wp-body :is(.section-admin-tabs button, .all-tabs button).active, html.fm-admin .wp-body :is(.section-admin-tabs button, .all-tabs button)[aria-selected="true"] { background: var(--wp-blue) !important; color: #fff !important; }
+html.fm-admin .wp-body :is(.danger, .delete-page, .remove-review) { color: var(--wp-red) !important; border-color: var(--wp-red) !important; }
+
+/* Form fields */
+html.fm-admin .wp-shell :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=hidden]), select, textarea),
+html.fm-admin .wp-login input {
+  min-height: 30px; padding: 0 8px !important; background-color: #fff !important; border: 1px solid #8c8f94 !important; border-radius: 4px !important; box-shadow: 0 0 0 transparent !important; color: #2c3338 !important; font-size: 14px !important; line-height: 2 !important; font-family: var(--wp-font) !important;
+}
+html.fm-admin .wp-shell textarea { padding: 6px 8px !important; line-height: 1.5 !important; }
+html.fm-admin .wp-shell :is(input, select, textarea):focus, html.fm-admin .wp-login input:focus { border-color: var(--wp-blue) !important; box-shadow: 0 0 0 1px var(--wp-blue) !important; outline: 2px solid transparent !important; }
+html.fm-admin .wp-shell :is(input[type=checkbox], input[type=radio]) { accent-color: var(--wp-blue); }
+html.fm-admin .wp-body label { color: var(--wp-text) !important; font-size: 14px !important; font-weight: 400 !important; text-transform: none !important; letter-spacing: normal !important; }
+
+/* Tables and list rows ("WP list table") */
+html.fm-admin .wp-body table { border-collapse: collapse; background: #fff; border: 1px solid var(--wp-border); width: 100%; }
+html.fm-admin .wp-body th { padding: 8px 10px !important; border-bottom: 1px solid var(--wp-border); color: var(--wp-text) !important; font-size: 14px !important; font-weight: 400 !important; text-align: left; text-transform: none !important; letter-spacing: normal !important; background: #fff !important; }
+html.fm-admin .wp-body td { padding: 8px 10px !important; color: #50575e; font-size: 13px; }
+html.fm-admin .wp-body tbody tr:nth-child(odd) { background: #f6f7f7; }
+html.fm-admin .wp-body :is(.table-row, .page-list-row, .order-row, .admin-order-row) { border-bottom: 1px solid var(--wp-border-light) !important; }
+html.fm-admin .wp-body :is(.table-row, .page-list-row):hover { background: #f6f7f7 !important; }
+
+/* Accent colours: replace the old gold/plum with WordPress blue */
+html.fm-admin .wp-body :is(.status, .track-status) { border-radius: 3px !important; }
+html.fm-admin .wp-shell ::selection { background: #c5d9ed; }
+
+/* Save indicator from adminSync sits above WordPress-style content */
+html.fm-admin [role=status][style*="position: fixed"] { font-family: var(--wp-font) !important; }
+
+/* ---------- WordPress-style login ---------- */
+html.fm-admin .wp-login { min-height: 100vh; display: flex; justify-content: center; background: var(--wp-bg); font: 13px/1.4 var(--wp-font); color: #3c434a; }
+html.fm-admin .wp-login-box { width: 320px; padding: 8% 0 0; }
+html.fm-admin .wp-login-logo { display: block; margin: 0 auto 25px; width: 200px; background: var(--wp-bar); border-radius: 6px; padding: 14px 18px; }
+html.fm-admin .wp-login-logo img { display: block; width: 100%; height: auto; }
+html.fm-admin .wp-login-form { margin-top: 20px; padding: 26px 24px 34px; background: #fff; border: 1px solid var(--wp-border); box-shadow: 0 1px 3px rgba(0, 0, 0, .04); display: flex; flex-direction: column; }
+html.fm-admin .wp-login-form label { display: flex; flex-direction: column; gap: 3px; margin-bottom: 16px; font-size: 14px; color: #3c434a; }
+html.fm-admin .wp-login-form input { width: 100%; box-sizing: border-box; min-height: 40px !important; font-size: 20px !important; padding: 0 8px !important; }
+html.fm-admin .wp-login-form .wp-button-primary { align-self: flex-end; min-height: 32px !important; padding: 0 12px !important; }
+html.fm-admin .wp-login-error { margin: 0 0 16px; padding: 12px; background: #fff; border-left: 4px solid var(--wp-red); box-shadow: 0 1px 1px rgba(0, 0, 0, .04); color: #3c434a; font-size: 13px; }
+html.fm-admin .wp-login-back { margin: 24px 0 0; padding: 0 24px; font-size: 13px; }
+html.fm-admin .wp-login-back a { color: #50575e; text-decoration: none; }
+html.fm-admin .wp-login-back a:hover { color: var(--wp-blue); }
+
+/* ---------- Small screens (WordPress switches at 782px) ---------- */
+@media (max-width: 782px) {
+  html.fm-admin .wp-shell { padding-top: 46px; }
+  html.fm-admin .wp-adminbar { height: 46px; }
+  html.fm-admin .wp-adminbar a, html.fm-admin .wp-adminbar button { height: 46px; padding: 0 12px; }
+  html.fm-admin .wp-adminbar svg { width: 26px; height: 26px; }
+  html.fm-admin .wp-adminbar :is(.wp-bar-site, .wp-bar-new, .wp-bar-visit, .wp-bar-account) span { display: none; }
+  html.fm-admin .wp-bar-toggle { display: flex !important; }
+  html.fm-admin .wp-bar-sub { top: 46px; }
+  html.fm-admin .wp-menu { top: 46px !important; inset: 46px auto 0 0 !important; width: 190px !important; transform: translateX(-100%); transition: transform .2s; overflow-y: auto !important; }
+  html.fm-admin .wp-shell.menu-open .wp-menu { transform: none; }
+  html.fm-admin .wp-shell.menu-open .wp-menu-backdrop { display: block; position: fixed; inset: 46px 0 0 0; z-index: 9980; background: rgba(0, 0, 0, .35); border: 0; }
+  html.fm-admin .wp-menu-top:not(.current):hover .wp-submenu { position: static; box-shadow: none; }
+  html.fm-admin .wp-collapse { display: none !important; }
+  html.fm-admin .wp-body, html.fm-admin .wp-shell.folded .wp-body { margin-left: 0 !important; padding: 0 10px 40px !important; }
+  html.fm-admin .wp-shell.folded .wp-menu { width: 190px !important; }
+  html.fm-admin .wp-shell.folded .wp-menu .wp-menu-name span { display: inline; }
+  html.fm-admin .wp-menu .wp-menu-name { min-height: 44px !important; font-size: 16px !important; }
+  html.fm-admin .wp-submenu button { padding-top: 10px !important; padding-bottom: 10px !important; font-size: 14px !important; }
+  html.fm-admin .wp-body .admin-welcome { flex-direction: column; align-items: flex-start; }
+}
+
+/* ---------- List screens (products, orders, coupons…) as WordPress list tables ---------- */
+html.fm-admin .wp-body header:not(.wp-page-head), html.fm-admin .wp-body footer {
+  position: static !important; height: auto !important; background: #fff !important; color: var(--wp-text) !important; box-shadow: none !important;
+}
+html.fm-admin .wp-body header:not(.wp-page-head) { border-bottom: 1px solid var(--wp-border) !important; }
+html.fm-admin .wp-body footer { border-top: 1px solid var(--wp-border) !important; color: var(--wp-muted) !important; }
+html.fm-admin .wp-body :is(header:not(.wp-page-head), footer) :is(span, b, strong, small, p) { color: inherit !important; }
+html.fm-admin .wp-body .wp-product-table { border: 1px solid var(--wp-border) !important; background: #fff !important; }
+html.fm-admin .wp-body .wp-product-table > header span { color: var(--wp-text) !important; font-size: 14px !important; font-weight: 400 !important; text-transform: none !important; }
+html.fm-admin .wp-body .wp-product-table > article { background: #fff !important; border-bottom: 1px solid var(--wp-border-light) !important; }
+html.fm-admin .wp-body .wp-product-table > article:nth-of-type(odd) { background: #f6f7f7 !important; }
+html.fm-admin .wp-body .wp-product-table > article:hover { background: #f0f6fc !important; }
+html.fm-admin .wp-body .product-name-cell > button { color: var(--wp-blue) !important; font-weight: 600 !important; font-size: 14px !important; text-align: left; }
+html.fm-admin .wp-body .product-name-cell > button:hover { color: var(--wp-blue-dark) !important; text-decoration: underline; }
+html.fm-admin .wp-body .product-name-cell a, html.fm-admin .wp-body .trash-link { color: var(--wp-red) !important; }
+html.fm-admin .wp-body .in-stock { color: var(--wp-green) !important; font-weight: 600 !important; }
+html.fm-admin .wp-body .out-stock { color: var(--wp-red) !important; font-weight: 600 !important; }
+html.fm-admin .wp-body .products-admin-page { padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; }
+html.fm-admin .wp-body .products-admin-title { display: flex !important; align-items: center; justify-content: space-between; padding: 10px 12px !important; margin-bottom: 10px !important; }
+html.fm-admin .wp-body .products-admin-title h2 { display: none; }
+html.fm-admin .wp-body .products-admin-title p { color: var(--wp-muted) !important; font-size: 13px !important; }
+html.fm-admin .wp-body .products-admin-title p b { color: var(--wp-text) !important; font-weight: 600 !important; }
+html.fm-admin .wp-body .products-admin-title > button, html.fm-admin .wp-body .product-list-tools button {
+  min-height: 30px !important; padding: 0 10px !important; background: #f6f7f7 !important; border: 1px solid var(--wp-blue) !important; border-radius: 3px !important; color: var(--wp-blue) !important; font-size: 13px !important; font-weight: 400 !important; box-shadow: none !important;
+}
+html.fm-admin .wp-body .products-admin-title > button:hover, html.fm-admin .wp-body .product-list-tools button:hover { background: #f0f0f1 !important; border-color: var(--wp-blue-dark) !important; color: var(--wp-blue-dark) !important; }
+html.fm-admin .wp-body .product-list-tools { background: none !important; border: 0 !important; padding: 0 0 8px !important; }
+html.fm-admin .wp-body .product-list-tools button svg { color: var(--wp-blue) !important; }
+
+/* Full-screen editors open beside the menu, like WordPress's "Edit Product" screen */
+html.fm-admin .wp-body .product-editor-screen { inset: 32px 0 0 160px !important; background: var(--wp-bg) !important; z-index: 9000 !important; overflow: auto !important; }
+html.fm-admin .wp-shell.folded .wp-body .product-editor-screen { left: 36px !important; }
+@media (max-width: 782px) {
+  html.fm-admin .wp-body .product-editor-screen, html.fm-admin .wp-shell.folded .wp-body .product-editor-screen { inset: 46px 0 0 0 !important; }
+}
+
+/* ---------- Remap the old gold/plum theme colours to WordPress colours ---------- */
+html.fm-admin { --gold: #2271b1; --admin-gold: #2271b1; --admin-plum: #2271b1; --admin-plum-soft: #135e96; --admin-cream: #f0f0f1; --admin-cream-deep: #f6f7f7; --admin-ink: #1d2327; --ink: #1d2327; --cream: #f0f0f1; }
+html.fm-admin .wp-shell :is(input[type=range], input[type=checkbox], input[type=radio]) { accent-color: var(--wp-blue); }
+
+/* Save bars: white bar with a top border, like WordPress's sticky "Update" areas */
+html.fm-admin .wp-body :is(.admin-save-bar, .settings-savebar) { background: #fff !important; border: 1px solid var(--wp-border) !important; box-shadow: 0 -1px 2px rgba(0, 0, 0, .04) !important; color: var(--wp-text) !important; }
+html.fm-admin .wp-body :is(.admin-save-bar, .settings-savebar) :is(p, span, small, strong) { color: var(--wp-muted) !important; }
+
+/* Customize screen header and the home-builder card were designed for dark backgrounds */
+html.fm-admin .wp-body :is(.settings-toolbar, .complete-home-card, .column-guide, .pages-easy-intro, .coupon-title, .store-status) { background: #fff !important; background-image: none !important; border: 1px solid var(--wp-border) !important; color: var(--wp-text) !important; }
+html.fm-admin .wp-body :is(.settings-toolbar, .complete-home-card, .column-guide, .pages-easy-intro, .coupon-title, .store-status) :is(h2, h3, h4, strong, b) { color: var(--wp-text) !important; }
+html.fm-admin .wp-body :is(.settings-toolbar, .complete-home-card, .column-guide, .pages-easy-intro, .coupon-title, .store-status) :is(p, span, small, li, code) { color: var(--wp-muted) !important; }
+html.fm-admin .wp-body :is(.settings-toolbar, .complete-home-card) > div > p:first-child, html.fm-admin .wp-body .complete-home-copy > p:first-child { color: var(--wp-blue) !important; font-weight: 600; }
+html.fm-admin .wp-body .complete-home-badge { background: #f0f6fc !important; border: 1px dashed #72aee6 !important; color: var(--wp-blue) !important; transform: none !important; }
+html.fm-admin .wp-body .complete-home-badge :is(span, svg) { color: var(--wp-blue) !important; }
+html.fm-admin .wp-body .home-builder-steps :is(b, i, em) { background: var(--wp-blue) !important; color: #fff !important; }
+html.fm-admin .wp-body :is(.reset-settings) { background: #f6f7f7 !important; }
+html.fm-admin .wp-body :is(.user-avatar, .drag-number) { background: var(--wp-blue) !important; color: #fff !important; border-color: var(--wp-blue) !important; }
+html.fm-admin .wp-body .panel-head button:not(.admin-primary):not(.add-btn) { color: var(--wp-blue) !important; }
+
+/* The admin-only text size control has no effect with the WordPress type scale */
+html.fm-admin .wp-body .admin-typography-control { display: none !important; }
+html.fm-admin .wp-body .menu-manager-note { background: #f0f6fc !important; border: 1px solid #c5d9ed !important; border-left: 4px solid var(--wp-blue) !important; color: var(--wp-text) !important; }
+html.fm-admin .wp-body .menu-manager-note strong { background: var(--wp-blue) !important; color: #fff !important; }
+html.fm-admin .wp-body .home-preview-toolbar > div > p:first-child { color: var(--wp-blue) !important; font-weight: 600; }
+html.fm-admin .wp-body :is(.coupon-title, .store-status, .pages-easy-intro) button { min-height: 32px !important; padding: 0 12px !important; background: var(--wp-blue) !important; border: 1px solid var(--wp-blue) !important; border-radius: 3px !important; color: #fff !important; font-size: 13px !important; font-weight: 400 !important; box-shadow: none !important; }
+html.fm-admin .wp-body :is(.coupon-title, .store-status, .pages-easy-intro) button:hover { background: var(--wp-blue-dark) !important; }
+html.fm-admin .wp-body :is(.coupon-title, .store-status, .pages-easy-intro) button svg { color: #fff !important; }
+html.fm-admin .wp-body .coupon-admin :is(table, [class*=table]) button { color: var(--wp-blue) !important; font-weight: 600 !important; background: none !important; border: 0 !important; padding: 0 !important; }
+html.fm-admin .wp-body .coupon-admin :is(table, [class*=table]) button:hover { color: var(--wp-blue-dark) !important; text-decoration: underline; }
