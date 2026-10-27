@@ -137,3 +137,16 @@ html.fm-admin .fm-history small { color: var(--wp-muted); }
   html.fm-admin .fm-form { grid-template-columns: 1fr; }
   html.fm-admin .fm-subrow li { grid-template-columns: 1fr 1fr; }
 }
+
+/* Payment status */
+html.fm-admin .fm-pay { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+html.fm-admin .fm-pay-paid { background: #dcefe3; color: #1d6b43; }
+html.fm-admin .fm-pay-pending { background: #f8e8c4; color: #7a5410; }
+html.fm-admin .fm-pay-failed { background: #f6dcdc; color: #a12626; }
+html.fm-admin .fm-pay-cod { background: #efe7da; color: #5b4a31; }
+html.fm-admin .fm-status.s-awaiting-payment { background: #f8e8c4; color: #7a5410; }
+html.fm-admin .fm-status.s-payment-failed { background: #f6dcdc; color: #a12626; }
+html.fm-admin .fm-warn { background: #fdf3dc; border-left: 4px solid #c49a3f; padding: 10px 12px; margin: 0 0 16px; }
+html.fm-admin .fm-paid { margin: 12px 0 0; padding: 8px 10px; background: #e7f5ec; color: #1d6b43; font-weight: 500; }
+html.fm-admin .fm-paid a { color: inherit; text-decoration: underline; }
+html.fm-admin .fm-table td:nth-child(2) { white-space: nowrap; }

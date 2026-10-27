@@ -11,9 +11,12 @@ import fs from 'fs';
 import {fileURLToPath} from 'url';
 dotenv.config();
 const {pool, q, migrate, getKv, setKv} = await import('./db.js');
+const {createPayments} = await import('./payments.js');
 
 const app = express();
 app.use(cors({origin: process.env.CLIENT_URL || true}));
+// Stripe's webhook must read the raw request body to check its signature, so it comes before the JSON parser.
+app.post('/api/stripe/webhook', express.raw({type: 'application/json'}), (req, res, next) => payments.webhook(req, res).catch(next));
 app.use(express.json({limit: '25mb'}));
 app.use(morgan('dev'));
 
@@ -92,6 +95,7 @@ const mailer = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMT
 const notify = (subject, text, replyTo) => mailer?.sendMail({from: process.env.SMTP_FROM || process.env.SMTP_USER, to: STORE_EMAIL, replyTo, subject, text}).catch(e => console.warn('Email failed:', e.message));
 
 const money = n => `$${Number(n || 0).toFixed(2)}`;
+const payments = createPayments({q, notify, money});
 const pid = p => String(p?.id || p?._id || '');
 
 function couponDiscount(coupon, items, subtotal, used) {
@@ -157,7 +161,7 @@ app.get('/api/store', wrap(async (req, res) => {
   // Page-builder drafts stay private until the owner publishes them.
   if (content['page-layouts']) content['page-layouts'] = Object.fromEntries(Object.entries(content['page-layouts']).filter(([, l]) => l?.status !== 'Draft'));
   res.set('Cache-Control', 'no-cache');
-  res.json({database: dbReady, ...content, products: kv.products || null, categories: kv.categories || null});
+  res.json({database: dbReady, ...content, products: kv.products || null, categories: kv.categories || null, payments: {card: payments.enabled}});
 }));
 
 app.post('/api/coupons/validate', wrap(async (req, res) => {
@@ -171,6 +175,8 @@ app.post('/api/orders', needDb, wrap(async (req, res) => {
   const b = req.body || {};
   const email = String(b.email || '').trim();
   if (!email || !b.customer || !b.address || !b.phone) return res.status(400).json({message: 'Please complete your contact and shipping details.'});
+  const card = b.payment === 'Card';
+  if (card && !payments.enabled) return res.status(400).json({message: 'Card payments are not available right now. Please choose Cash on Delivery.'});
   const priced = await priceCart(b.items, b.couponCode, email);
   let customerId = '';
   try { const t = jwt.verify(bearer(req), JWT_SECRET); if (t.kind === 'customer') customerId = String(t.cid); } catch { /* guest checkout */ }
@@ -178,12 +184,26 @@ app.post('/api/orders', needDb, wrap(async (req, res) => {
   const order = {
     id: newId(), customer: String(b.customer), email, phone: String(b.phone), address: String(b.address), notes: String(b.notes || ''),
     items: priced.items, subtotal: priced.subtotal, discount: priced.discount, shipping: priced.shipping, total: priced.total,
-    couponCode: priced.coupon?.code || '', payment: b.payment === 'Online Payment' ? 'Online Payment' : 'Cash on Delivery',
-    status: 'Processing', date: now, customerId, location: 'Order received', customerMessage: 'Your order has been received and is being prepared.',
-    trackingHistory: [{status: 'Processing', location: 'Order received', message: 'Your order has been received and is being prepared.', date: now}]
+    couponCode: priced.coupon?.code || '', date: now, customerId,
+    // Card orders wait for Stripe to confirm payment before they become real orders.
+    ...(card ? {payment: 'Card', paymentStatus: 'pending', status: 'Awaiting payment', location: 'Payment', customerMessage: 'We are waiting for your card payment to complete.',
+      trackingHistory: [{status: 'Awaiting payment', location: 'Payment', message: 'Order created. Waiting for card payment.', date: now}]}
+      : {payment: 'Cash on Delivery', paymentStatus: 'cod', status: 'Processing', location: 'Order received', customerMessage: 'Your order has been received and is being prepared.',
+        trackingHistory: [{status: 'Processing', location: 'Order received', message: 'Your order has been received and is being prepared.', date: now}]})
   };
   for (let tries = 0; ; tries++) {
     try { await q('INSERT INTO orders (id, email, customer_id, status, total, data) VALUES ($1,$2,$3,$4,$5,$6)', orderRow(order)); break; } catch (e) { if (e.code !== '23505' || tries > 4) throw e; order.id = newId(); }
+  }
+  if (card) {
+    let session;
+    try { session = await payments.createCheckout(order, req); } catch (e) {
+      console.error('Stripe checkout error:', e.message);
+      await q('DELETE FROM orders WHERE id = $1', [order.id]);
+      return res.status(502).json({message: 'We couldn’t start the card payment. Please try again, or choose Cash on Delivery.'});
+    }
+    order.stripeSessionId = session.id;
+    await q('UPDATE orders SET data = data || $2::jsonb WHERE id = $1', [order.id, JSON.stringify({stripeSessionId: session.id})]);
+    return res.status(201).json({...order, checkoutUrl: session.url});
   }
   if (order.couponCode) {
     await q(`INSERT INTO kv (key, value) VALUES ('coupon-usage', jsonb_build_object($1::text, 1))
@@ -194,6 +214,17 @@ app.post('/api/orders', needDb, wrap(async (req, res) => {
     order.items.map(i => `${i.qty} × ${i.name}${i.size ? ` (${i.size})` : ''} — ${money(i.price * i.qty)}`).join('\n') +
     `\n\nSubtotal ${money(order.subtotal)}${order.discount ? `\nDiscount −${money(order.discount)}` : ''}\nShipping ${money(order.shipping)}\nTotal ${money(order.total)}${order.notes ? `\n\nNotes: ${order.notes}` : ''}`, order.email);
   res.status(201).json(order);
+}));
+
+// Called by the order-success page after Stripe sends the shopper back.
+app.get('/api/orders/:id/payment', needDb, wrap(async (req, res) => {
+  const id = String(req.params.id), sessionId = String(req.query.session_id || '');
+  if (payments.enabled && sessionId.startsWith('cs_')) {
+    try { await payments.confirm(id, sessionId); } catch (e) { console.warn('Stripe confirm failed:', e.message); }
+  }
+  const {rows} = await q('SELECT data FROM orders WHERE id = $1', [id]);
+  if (!rows[0] || (sessionId && rows[0].data.stripeSessionId !== sessionId)) return res.status(404).json({message: 'Order not found'});
+  res.json({paymentStatus: rows[0].data.paymentStatus || 'cod', status: rows[0].data.status});
 }));
 
 // Tracking needs only the order number, so it returns no address, phone or email.
@@ -298,8 +329,16 @@ const syncCollection = (table, toRow) => wrap(async (req, res) => {
     await client.query('BEGIN');
     for (const item of upsert.filter(x => x?.id)) {
       if (table === 'orders') {
+        // Payment details are owned by the server (Stripe confirms them), so an admin's older copy can't undo a payment.
         await client.query(`INSERT INTO orders (id, email, customer_id, status, total, data) VALUES ($1,$2,$3,$4,$5,$6)
-          ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, status = EXCLUDED.status, total = EXCLUDED.total, data = EXCLUDED.data, updated_at = now()`, toRow(item));
+          ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, total = EXCLUDED.total, updated_at = now(),
+            status = CASE WHEN orders.data->>'paymentStatus' = 'paid' AND EXCLUDED.status IN ('Awaiting payment', 'Payment failed') THEN orders.status ELSE EXCLUDED.status END,
+            data = CASE
+              WHEN orders.data->>'paymentStatus' = 'paid' AND EXCLUDED.data->>'status' IN ('Awaiting payment', 'Payment failed')
+                THEN orders.data || (EXCLUDED.data - 'status' - 'location' - 'customerMessage' - 'trackingHistory' - 'paymentStatus')
+              ELSE EXCLUDED.data
+            END || jsonb_strip_nulls(jsonb_build_object('paymentStatus', orders.data->'paymentStatus', 'paidAt', orders.data->'paidAt', 'stripeSessionId', orders.data->'stripeSessionId',
+              'stripePaymentIntent', orders.data->'stripePaymentIntent', 'stripeLivemode', orders.data->'stripeLivemode', 'amountPaid', orders.data->'amountPaid'))`, toRow(item));
       } else {
         await client.query('INSERT INTO messages (id, data) VALUES ($1,$2) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data', toRow(item));
       }

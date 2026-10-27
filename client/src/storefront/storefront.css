@@ -861,3 +861,6 @@ body.sf-lock { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .sf *, .sf *::before, .sf *::after { animation: none !important; transition: none !important; }
 }
+.sf-callout-warn { background: #fdecea; border-left: 3px solid var(--sf-red); }
+.sf-pay-badges { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; color: var(--sf-green); font-weight: 500; }
+.sf-pay-badges svg { width: 13px; height: 13px; }

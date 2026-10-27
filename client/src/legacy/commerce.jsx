@@ -12,8 +12,15 @@ export const ORDER_STATUSES = {
   Shipped: ['In transit', 'Your order has been shipped and is on the way. Track its journey here.'],
   'Out for Delivery': ['Local delivery facility', 'Your order is out for delivery and should reach you today.'],
   Delivered: ['Delivered', 'Your order has been delivered. Thank you for shopping with FlairMantra.'],
-  Cancelled: ['Order cancelled', 'This order has been cancelled. Please contact us if you need help.']
+  Cancelled: ['Order cancelled', 'This order has been cancelled. Please contact us if you need help.'],
+  'Awaiting payment': ['Payment', 'We are waiting for your card payment to complete.'],
+  'Payment failed': ['Payment', 'The payment was not completed, so this order was not placed.']
 };
+// Orders that never became real sales (unpaid card checkouts) are left out of totals.
+const NOT_SALES = ['Cancelled', 'Awaiting payment', 'Payment failed'];
+const PAYMENT_LABEL = {paid: 'Paid', pending: 'Awaiting payment', failed: 'Failed', cod: 'Cash on delivery'};
+const paymentOf = o => o.paymentStatus || (o.payment === 'Card' ? 'pending' : 'cod');
+const PaymentBadge = ({o}) => <span className={`fm-pay fm-pay-${paymentOf(o)}`}>{PAYMENT_LABEL[paymentOf(o)]}</span>;
 const OPEN_STATUSES = ['Processing', 'Confirmed', 'Packed'];
 const LOW_STOCK = 5;
 
@@ -50,7 +57,7 @@ function DailySalesChart({orders}) {
     for (let i = 29; i >= 0; i--) {
       const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
       const key = localDay(d);
-      const dayOrders = orders.filter(o => o.status !== 'Cancelled' && o.date && localDay(new Date(o.date)) === key);
+      const dayOrders = orders.filter(o => !NOT_SALES.includes(o.status) && o.date && localDay(new Date(o.date)) === key);
       out.push({key, date: d, total: dayOrders.reduce((s, o) => s + Number(o.total || 0), 0), count: dayOrders.length});
     }
     return out;
@@ -91,12 +98,12 @@ function RankedBars({rows, format = v => v, empty}) {
 export function SalesOverview({products, setTab}) {
   const orders = readJSON('fm-orders', []);
   const since = Date.now() - 30 * 864e5;
-  const recent = orders.filter(o => o.status !== 'Cancelled' && new Date(o.date).getTime() >= since);
+  const recent = orders.filter(o => !NOT_SALES.includes(o.status) && new Date(o.date).getTime() >= since);
   const revenue = recent.reduce((s, o) => s + Number(o.total || 0), 0);
   const toShip = orders.filter(o => OPEN_STATUSES.includes(o.status || 'Processing')).length;
   const customers = new Set(orders.map(o => String(o.email || '').toLowerCase()).filter(Boolean)).size;
   const units = {};
-  orders.filter(o => o.status !== 'Cancelled').forEach(o => (o.items || []).forEach(i => { units[i.name] = (units[i.name] || 0) + Number(i.qty || 1); }));
+  orders.filter(o => !NOT_SALES.includes(o.status)).forEach(o => (o.items || []).forEach(i => { units[i.name] = (units[i.name] || 0) + Number(i.qty || 1); }));
   const top = Object.entries(units).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([label, value]) => ({label, value}));
   const byStatus = Object.keys(ORDER_STATUSES).map(s => ({label: s, value: orders.filter(o => (o.status || 'Processing') === s).length})).filter(r => r.value);
   const low = products.filter(p => Number(p.stock ?? 0) <= LOW_STOCK).sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0));
@@ -171,7 +178,7 @@ function OrderDrawer({order, onClose, onUpdate}) {
     <button className="fm-drawer-backdrop" onClick={onClose} aria-label="Close order"/>
     <aside className="fm-drawer" role="dialog" aria-label={`Order ${order.id}`}>
       <header className="fm-drawer-head">
-        <div><h2>Order #{order.id}</h2><small>Placed {dateText(order.date)} · {order.payment || '—'}</small></div>
+        <div><h2>Order #{order.id}</h2><small>Placed {dateText(order.date)} · <PaymentBadge o={order}/></small></div>
         <span className={statusClass(order.status)}>{order.status || 'Processing'}</span>
         <button className="fm-icon" onClick={onClose} aria-label="Close"><X/></button>
       </header>
@@ -180,6 +187,8 @@ function OrderDrawer({order, onClose, onUpdate}) {
           <button className="fm-secondary" onClick={() => printDocument(order, 'invoice')}><FileText/> Print invoice</button>
           <button className="fm-secondary" onClick={() => printDocument(order, 'slip')}><Printer/> Packing slip</button>
         </div>
+        {paymentOf(order) === 'pending' && <p className="fm-warn">This card payment hasn’t been completed. Don’t ship it until it shows <b>Paid</b>.</p>}
+        {paymentOf(order) === 'failed' && <p className="fm-warn">The customer didn’t complete the card payment, so this isn’t a real order.</p>}
         <section className="fm-box">
           <h3>Customer</h3>
           <p><b>{order.customer}</b></p>
@@ -201,6 +210,7 @@ function OrderDrawer({order, onClose, onUpdate}) {
             <dt>Shipping</dt><dd>{order.shipping ? money(order.shipping) : 'Free'}</dd>
             <dt className="grand">Total</dt><dd className="grand">{money(order.total)}</dd>
           </dl>
+          {paymentOf(order) === 'paid' && <p className="fm-paid">Paid by card{order.paidAt ? ` on ${new Date(order.paidAt).toLocaleString('en-CA')}` : ''}{order.stripePaymentIntent && <> · <a href={`https://dashboard.stripe.com/${order.stripeLivemode ? '' : 'test/'}payments/${order.stripePaymentIntent}`} target="_blank" rel="noreferrer">View in Stripe</a></>}</p>}
         </section>
         <section className="fm-box">
           <h3>Status &amp; delivery</h3>
@@ -245,15 +255,16 @@ export function OrdersManager() {
     <ul className="fm-subsubsub">{Object.entries(counts).filter(([s, n]) => s === 'All' || n).map(([s, n]) => <li key={s}><button className={status === s ? 'current' : ''} onClick={() => setStatus(s)}>{s} <span>({n})</span></button></li>)}</ul>
     <div className="fm-tablenav"><label className="fm-search"><Search/><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders, customers, email…" aria-label="Search orders"/></label><span>{shown.length} {shown.length === 1 ? 'item' : 'items'}</span></div>
     <table className="fm-table">
-      <thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Status</th><th>Items</th><th className="r">Total</th></tr></thead>
+      <thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Status</th><th>Payment</th><th>Items</th><th className="r">Total</th></tr></thead>
       <tbody>{shown.length ? shown.map(o => <tr key={o.id} onClick={() => setOpenId(o.id)} className="fm-row-link">
         <td><button className="fm-row-title">#{o.id}</button></td>
         <td>{dateText(o.date)}</td>
         <td><b>{o.customer}</b><small>{o.email}</small></td>
         <td><span className={statusClass(o.status)}>{o.status || 'Processing'}</span></td>
+        <td><PaymentBadge o={o}/></td>
         <td>{(o.items || []).reduce((s, i) => s + Number(i.qty || 1), 0)}</td>
         <td className="r"><b>{money(o.total)}</b></td>
-      </tr>) : <tr><td colSpan="6" className="fm-empty">{orders.length ? 'No orders match.' : 'No orders yet. New orders appear here as soon as customers check out.'}</td></tr>}</tbody>
+      </tr>) : <tr><td colSpan="7" className="fm-empty">{orders.length ? 'No orders match.' : 'No orders yet. New orders appear here as soon as customers check out.'}</td></tr>}</tbody>
     </table>
     {open && <OrderDrawer key={open.id} order={open} onClose={() => setOpenId(null)} onUpdate={update}/>}
   </section>;
@@ -271,7 +282,7 @@ export function CustomersManager() {
       const email = String(o.email || '').toLowerCase().trim(); if (!email) return;
       const c = map.get(email) || {email, name: o.customer, phone: o.phone, address: o.address, orders: [], spent: 0, last: null};
       c.orders.push(o);
-      if (o.status !== 'Cancelled') c.spent += Number(o.total || 0);
+      if (!NOT_SALES.includes(o.status)) c.spent += Number(o.total || 0);
       if (!c.last || new Date(o.date) > new Date(c.last)) { c.last = o.date; c.name = o.customer || c.name; c.phone = o.phone || c.phone; c.address = o.address || c.address; }
       map.set(email, c);
     });

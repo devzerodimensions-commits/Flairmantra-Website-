@@ -103,10 +103,13 @@ export function CartPage() {
 }
 
 export function CheckoutPage() {
-  const {cart, setCart, subtotal, go, user, settings} = useStore();
+  const {cart, setCart, subtotal, go, user, settings, content, route} = useStore();
   const c = useCoupon();
+  const cardEnabled = !!content?.payments?.card;
+  const [method, setMethod] = useState(cardEnabled ? 'Card' : 'Cash on Delivery');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const cancelled = new URLSearchParams(route.split('?')[1] || '').get('payment') === 'cancelled';
   const [firstName, ...rest] = String(user?.name || '').split(' ');
   const saved = user?.address || {};
   useEffect(() => { document.title = 'Checkout | FlairMantra'; }, []);
@@ -142,7 +145,10 @@ export function CheckoutPage() {
         customerMessage: 'Your order has been received and is being prepared.', trackingHistory: [{status: 'Processing', location: 'Order received', message: 'Your order has been received and is being prepared.', date: now}]};
       writeJSON('fm-orders', [order, ...readJSON('fm-orders', [])]);
     }
-    writeJSON('fm-my-orders', [order, ...readJSON('fm-my-orders', [])].slice(0, 50));
+    const {checkoutUrl, ...saved} = order;
+    writeJSON('fm-my-orders', [saved, ...readJSON('fm-my-orders', []).filter(o => o.id !== saved.id)].slice(0, 50));
+    // Card orders go to Stripe's secure page; the bag is emptied only once payment is confirmed.
+    if (checkoutUrl) { location.assign(checkoutUrl); return; }
     sessionStorage.removeItem('fm-applied-coupon');
     setCart([]);
     go(`/order-success?id=${order.id}`);
@@ -153,6 +159,7 @@ export function CheckoutPage() {
       <div className="sf-steps"><span className="done">Bag</span><i/><span className="on">Details &amp; payment</span><i/><span>Confirmation</span></div>
       <div className="sf-checkout-grid">
         <form id="checkout" onSubmit={place} className="sf-checkout-form">
+          {cancelled && <div className="sf-callout sf-callout-warn">Your card payment was cancelled, so nothing was charged. Your bag is still here — you can try again or choose Cash on Delivery.</div>}
           {!user && <div className="sf-callout">Have an account? <Link to="/account?next=/checkout">Sign in</Link> for faster checkout and order history.</div>}
           <fieldset><legend><span>1</span> Contact</legend>
             <label className="sf-field"><span>Email</span><input name="email" type="email" autoComplete="email" required defaultValue={user?.email || ''}/></label>
@@ -173,8 +180,8 @@ export function CheckoutPage() {
             <label className="sf-field"><span>Order notes (optional)</span><textarea name="notes" rows="2" placeholder="Event date, delivery instructions…"/></label>
           </fieldset>
           <fieldset><legend><span>3</span> Payment</legend>
-            <label className="sf-pay-opt"><input type="radio" name="payment" value="Cash on Delivery" defaultChecked/><span><b>Cash on delivery</b><small>Pay when your order arrives.</small></span></label>
-            <label className="sf-pay-opt"><input type="radio" name="payment" value="Online Payment"/><span><b>Online payment</b><small>Our team will email you a secure payment link to confirm your order.</small></span></label>
+            {cardEnabled && <label className="sf-pay-opt"><input type="radio" name="payment" value="Card" checked={method === 'Card'} onChange={() => setMethod('Card')}/><span><b>Pay by card</b><small>Visa, Mastercard, Amex, Apple Pay or Google Pay on Stripe’s secure payment page.</small><span className="sf-pay-badges"><Lock/> Secured by Stripe</span></span></label>}
+            <label className="sf-pay-opt"><input type="radio" name="payment" value="Cash on Delivery" checked={method === 'Cash on Delivery'} onChange={() => setMethod('Cash on Delivery')}/><span><b>Cash on delivery</b><small>Pay when your order arrives.</small></span></label>
           </fieldset>
           {error && <p className="sf-error sf-form-error">{error}</p>}
         </form>
@@ -183,7 +190,7 @@ export function CheckoutPage() {
           <div className="sf-summary-items">{cart.map(i => <div className="sf-summary-item" key={i.cartKey}><span className="sf-summary-img"><img src={i.image} alt=""/><b>{i.qty}</b></span><span><b>{i.name}</b><small>{[i.selectedColor, i.size && i.size !== 'One Size' && `Size ${i.size}`].filter(Boolean).join(' · ')}</small></span><em>{money(i.price * i.qty)}</em></div>)}</div>
           <CouponBox c={c}/>
           <Totals c={c}/>
-          <button form="checkout" className="sf-btn sf-btn-block" disabled={busy}><Lock/> {busy ? 'Placing order…' : `Place order · ${money(c.total)}`}</button>
+          <button form="checkout" className="sf-btn sf-btn-block" disabled={busy}><Lock/> {busy ? (method === 'Card' ? 'Opening secure payment…' : 'Placing order…') : method === 'Card' ? `Continue to payment · ${money(c.total)}` : `Place order · ${money(c.total)}`}</button>
           <p className="sf-muted sf-small sf-center"><ShieldCheck/> By placing your order you agree to our <Link to="/shipping-returns">shipping &amp; returns policy</Link>.</p>
         </aside>
       </div>
@@ -192,18 +199,48 @@ export function CheckoutPage() {
 }
 
 export function OrderSuccess() {
-  const {route, user} = useStore();
-  const id = new URLSearchParams(route.split('?')[1] || '').get('id');
+  const {route, user, setCart} = useStore();
+  const params = new URLSearchParams(route.split('?')[1] || '');
+  const id = params.get('id'), sessionId = params.get('session_id');
   const order = [...readJSON('fm-my-orders', []), ...readJSON('fm-orders', [])].find(o => o.id === id);
+  // Card orders: ask the server to confirm the payment with Stripe before showing "thank you".
+  const [payment, setPayment] = useState(sessionId ? 'checking' : 'done');
   useEffect(() => { document.title = 'Order confirmed | FlairMantra'; }, []);
+  useEffect(() => {
+    if (!sessionId) return;
+    let stop = false;
+    (async () => {
+      for (let i = 0; i < 8 && !stop; i++) {
+        const d = await fetch(`${API}/orders/${encodeURIComponent(id)}/payment?session_id=${encodeURIComponent(sessionId)}`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+        if (d?.paymentStatus === 'paid') {
+          setPayment('paid'); setCart([]); sessionStorage.removeItem('fm-applied-coupon');
+          writeJSON('fm-my-orders', readJSON('fm-my-orders', []).map(o => (o.id === id ? {...o, paymentStatus: 'paid', status: d.status} : o)));
+          return;
+        }
+        if (d?.paymentStatus === 'failed') { setPayment('failed'); return; }
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      if (!stop) setPayment('slow');
+    })();
+    return () => { stop = true; };
+  }, [sessionId, id]);
+
+  if (payment === 'checking') return <div className="sf-wrap sf-done"><div className="sf-loading"><span/></div><h1>Confirming your payment…</h1><p>This only takes a few seconds. Please don’t close this page.</p></div>;
+  if (payment === 'failed') return <div className="sf-wrap sf-done">
+    <p className="sf-eyebrow">Payment not completed</p><h1>Your payment didn’t go through</h1>
+    <p>Nothing was charged and order <b>#{id}</b> was not placed. Your bag is still saved.</p>
+    <div className="sf-success-actions"><Link to="/checkout" className="sf-btn">Try again</Link><Link to="/contact" className="sf-btn sf-btn-ghost">Contact us</Link></div>
+  </div>;
   return <div className="sf-wrap sf-done">
     <div className="sf-success-icon"><CheckCircle2/></div>
-    <p className="sf-eyebrow">Order confirmed</p>
+    <p className="sf-eyebrow">{payment === 'paid' ? 'Payment received' : 'Order confirmed'}</p>
     <h1>Thank you{order ? `, ${order.customer.split(' ')[0]}` : ''}!</h1>
-    <p>Your order <b>#{id}</b> has been placed. We’ll send updates to {order?.email || 'your email'} as it’s packed and dispatched.</p>
+    {payment === 'slow'
+      ? <p>We’ve received order <b>#{id}</b> and are still waiting for the bank to confirm your payment. You can check its status any time on the Track order page.</p>
+      : <p>Your order <b>#{id}</b> has been placed{payment === 'paid' ? ' and paid' : ''}. We’ll send updates to {order?.email || 'your email'} as it’s packed and dispatched.</p>}
     {order && <div className="sf-success-card">
       {order.items.map(i => <div className="sf-summary-item" key={i.cartKey}><span className="sf-summary-img"><img src={i.image} alt=""/><b>{i.qty}</b></span><span><b>{i.name}</b><small>{i.size && i.size !== 'One Size' ? `Size ${i.size}` : i.selectedColor}</small></span><em>{money(i.price * i.qty)}</em></div>)}
-      <div className="sf-row sf-total"><span>Total · {order.payment}</span><span>{money(order.total)}</span></div>
+      <div className="sf-row sf-total"><span>Total · {order.payment === 'Card' ? (payment === 'paid' ? 'Paid by card' : 'Card') : order.payment}</span><span>{money(order.total)}</span></div>
       <p className="sf-muted sf-small">Shipping to {order.address}</p>
     </div>}
     <div className="sf-success-actions">
