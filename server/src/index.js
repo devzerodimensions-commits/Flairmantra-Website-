@@ -161,7 +161,7 @@ app.get('/api/store', wrap(async (req, res) => {
   // Page-builder drafts stay private until the owner publishes them.
   if (content['page-layouts']) content['page-layouts'] = Object.fromEntries(Object.entries(content['page-layouts']).filter(([, l]) => l?.status !== 'Draft'));
   res.set('Cache-Control', 'no-cache');
-  res.json({database: dbReady, ...content, products: kv.products || null, categories: kv.categories || null, payments: {card: payments.enabled}});
+  res.json({database: dbReady, ...content, products: kv.products || null, categories: kv.categories || null, payments: {card: dbReady && await payments.enabled()}});
 }));
 
 app.post('/api/coupons/validate', wrap(async (req, res) => {
@@ -176,7 +176,7 @@ app.post('/api/orders', needDb, wrap(async (req, res) => {
   const email = String(b.email || '').trim();
   if (!email || !b.customer || !b.address || !b.phone) return res.status(400).json({message: 'Please complete your contact and shipping details.'});
   const card = b.payment === 'Card';
-  if (card && !payments.enabled) return res.status(400).json({message: 'Card payments are not available right now. Please choose Cash on Delivery.'});
+  if (card && !(await payments.enabled())) return res.status(400).json({message: 'Card payments are not available right now. Please choose Cash on Delivery.'});
   const priced = await priceCart(b.items, b.couponCode, email);
   let customerId = '';
   try { const t = jwt.verify(bearer(req), JWT_SECRET); if (t.kind === 'customer') customerId = String(t.cid); } catch { /* guest checkout */ }
@@ -219,7 +219,7 @@ app.post('/api/orders', needDb, wrap(async (req, res) => {
 // Called by the order-success page after Stripe sends the shopper back.
 app.get('/api/orders/:id/payment', needDb, wrap(async (req, res) => {
   const id = String(req.params.id), sessionId = String(req.query.session_id || '');
-  if (payments.enabled && sessionId.startsWith('cs_')) {
+  if (sessionId.startsWith('cs_')) {
     try { await payments.confirm(id, sessionId); } catch (e) { console.warn('Stripe confirm failed:', e.message); }
   }
   const {rows} = await q('SELECT data FROM orders WHERE id = $1', [id]);
@@ -350,6 +350,10 @@ const syncCollection = (table, toRow) => wrap(async (req, res) => {
 });
 app.put('/api/admin/orders', needDb, adminAuth, syncCollection('orders', orderRow));
 app.put('/api/admin/inquiries', needDb, adminAuth, syncCollection('messages', m => [String(m.id), JSON.stringify(m)]));
+
+app.get('/api/admin/payment-settings', needDb, adminAuth, wrap(async (req, res) => res.json(await payments.describe())));
+app.put('/api/admin/payment-settings', needDb, adminAuth, wrap(async (req, res) => { await payments.saveSettings(req.body || {}); res.json(await payments.describe()); }));
+app.delete('/api/admin/payment-settings', needDb, adminAuth, wrap(async (req, res) => { await payments.clearSettings(); res.json(await payments.describe()); }));
 
 app.get('/api/admin/customers', needDb, adminAuth, wrap(async (req, res) => {
   const {rows} = await q('SELECT id, name, email, phone, created_at FROM customers ORDER BY created_at DESC LIMIT 1000');

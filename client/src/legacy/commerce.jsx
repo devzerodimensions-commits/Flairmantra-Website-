@@ -338,3 +338,49 @@ export function InventoryManager({products, setProducts}) {
     </table>
   </section>;
 }
+
+/* ---------- Payments settings (Stripe key) ---------- */
+
+export function PaymentSettings() {
+  const API = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+  const auth = {Authorization: `Bearer ${sessionStorage.getItem('fm-admin-token')}`};
+  const [info, setInfo] = useState(null);
+  const [key, setKey] = useState('');
+  const [hook, setHook] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const load = () => fetch(`${API}/admin/payment-settings`, {headers: auth}).then(r => r.json()).then(setInfo).catch(() => setInfo({error: true}));
+  React.useEffect(() => { load(); }, []);
+  const save = async e => {
+    e.preventDefault(); setBusy(true); setMsg(null);
+    try {
+      const r = await fetch(`${API}/admin/payment-settings`, {method: 'PUT', headers: {...auth, 'Content-Type': 'application/json'}, body: JSON.stringify({secretKey: key, webhookSecret: hook})});
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message || 'Could not save.');
+      setInfo(d); setKey(''); setHook(''); setMsg({ok: true, text: 'Saved. Card payments are now switched on at checkout.'});
+    } catch (err) { setMsg({ok: false, text: err.message}); } finally { setBusy(false); }
+  };
+  const remove = async () => {
+    if (!confirm('Turn off card payments? Checkout will offer Cash on Delivery only.')) return;
+    const r = await fetch(`${API}/admin/payment-settings`, {method: 'DELETE', headers: auth});
+    setInfo(await r.json()); setMsg({ok: true, text: 'Card payments are switched off.'});
+  };
+  return <section className="fm-list fm-payments">
+    <div className="fm-box">
+      <h3>Card payments (Stripe)</h3>
+      {!info ? <p className="fm-help">Loading…</p> : info.error ? <p className="fm-warn">Couldn’t reach the server.</p> :
+        info.enabled ? <p className="fm-paid">Switched on — {info.mode === 'live' ? 'live mode (real payments)' : 'test mode'} · key ending in <b>{info.last4}</b>{info.fromEnv ? ' · set on the server' : ''}</p>
+          : <p className="fm-warn">Card payments are off. Checkout currently offers Cash on Delivery only.</p>}
+      {info && !info.fromEnv && <form className="fm-form" onSubmit={save} autoComplete="off">
+        <label className="fm-wide">Stripe secret key<input type="password" value={key} onChange={e => setKey(e.target.value)} placeholder={info.enabled ? 'Paste a new key to replace the current one' : 'sk_live_…'} autoComplete="off" spellCheck="false"/></label>
+        <label className="fm-wide">Webhook signing secret (optional)<input type="password" value={hook} onChange={e => setHook(e.target.value)} placeholder="whsec_…" autoComplete="off" spellCheck="false"/></label>
+        <p className="fm-help fm-wide">Find the key in Stripe → Developers → API keys → Secret key. It’s stored privately on the server and never shown again.</p>
+        <div className="fm-wide" style={{display: 'flex', gap: 8}}>
+          <button className="fm-primary" disabled={busy || !(key || hook)}>{busy ? 'Checking with Stripe…' : 'Save'}</button>
+          {info.enabled && <button type="button" className="fm-secondary" onClick={remove}>Turn off card payments</button>}
+        </div>
+      </form>}
+      {msg && <p className={msg.ok ? 'fm-paid' : 'fm-warn'}>{msg.text}</p>}
+    </div>
+  </section>;
+}
