@@ -372,4 +372,5 @@ app.use((err, req, res, next) => {
 });
 
 const port = process.env.PORT || 5000;
-app.listen(port, () => console.log(`FlairMantra on http://localhost:${port}`));
+const host = process.env.HOST; // set on shared servers so the app listens only on its own address
+app.listen(port, host, () => console.log(`FlairMantra on http://${host || 'localhost'}:${port}`));
