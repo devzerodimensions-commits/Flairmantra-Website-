@@ -883,3 +883,16 @@ body.sf-lock { overflow: hidden; }
   .sf-reels { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; margin: 0 calc(-1 * var(--sf-gutter)); padding: 0 var(--sf-gutter) 8px; scrollbar-width: none; }
   .sf-reel { flex: 0 0 64%; scroll-snap-align: center; }
 }
+
+/* Meet FlairMantra (brand photo) */
+.sf-meet { display: grid; grid-template-columns: 1fr 1fr; max-width: var(--sf-wrap); margin: 64px auto 0; padding: 0 var(--sf-gutter); }
+.sf-meet-img img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #2a0f33; border-radius: var(--sf-radius-lg) 0 0 var(--sf-radius-lg); }
+.sf-meet-copy { background: var(--sf-cream); border-radius: 0 var(--sf-radius-lg) var(--sf-radius-lg) 0; padding: 56px; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+.sf-meet-copy h2 { font-size: 46px; }
+.sf-meet-copy > p:not(.sf-eyebrow) { color: var(--sf-ink-2); max-width: 460px; }
+@media (max-width: 900px) {
+  .sf-meet { grid-template-columns: 1fr; margin-top: 40px; }
+  .sf-meet-img img { border-radius: var(--sf-radius-lg) var(--sf-radius-lg) 0 0; }
+  .sf-meet-copy { border-radius: 0 0 var(--sf-radius-lg) var(--sf-radius-lg); padding: 28px; }
+  .sf-meet-copy h2 { font-size: 32px; }
+}

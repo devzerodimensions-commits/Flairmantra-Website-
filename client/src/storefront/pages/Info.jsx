@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Mail, Phone, MapPin, Clock, Instagram, Facebook, CheckCircle2, Truck, RotateCcw, Repeat, HelpCircle, ArrowRight, FileQuestion} from 'lucide-react';
 import {useStore, API, readJSON, writeJSON, money} from '../store';
-import {Breadcrumbs, Empty, Link} from '../components';
+import {Breadcrumbs, Empty, Link, MeetFlairMantra} from '../components';
 
 const useTitle = t => useEffect(() => { document.title = `${t} | FlairMantra`; }, [t]);
 
@@ -12,6 +12,7 @@ export function AboutPage() {
       <img src="/social/flairmantra-grey-navratri.jpeg" alt="FlairMantra festive look"/>
       <div className="sf-wrap"><p className="sf-eyebrow">Our story</p><h1>Tradition. Elegance. You.</h1><p>FlairMantra celebrates Indian occasion wear through expressive colour, timeless silhouettes and thoughtful craftsmanship — created to help you feel confidently yourself at every celebration.</p><Link to="/shop" className="sf-btn sf-btn-gold">Discover the collection <ArrowRight/></Link></div>
     </section>
+    <MeetFlairMantra link={false}/>
     <section className="sf-wrap sf-values">
       {[['01', 'Rooted in tradition', 'Indian artistry and festive stories inspire every collection.'], ['02', 'Made for every you', 'Inclusive sizing and styles that celebrate individuality, confidence and joy.'], ['03', 'Chosen with care', 'Considered fabrics, detailed finishes and quality you can feel.']].map(([n, t, d]) => <article key={n}><b>{n}</b><h3>{t}</h3><p>{d}</p></article>)}
     </section>

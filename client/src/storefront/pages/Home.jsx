@@ -1,7 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {ArrowRight, ChevronLeft, ChevronRight, Instagram, Play, Quote} from 'lucide-react';
 import {useStore, isNew, slugify} from '../store';
-import {Link, ProductRail, ProductCarousel, ProductGrid, SectionHead} from '../components';
+import {Link, MeetFlairMantra, ProductRail, ProductCarousel, ProductGrid, SectionHead} from '../components';
 
 const bannerDefaults = [
   {id: 'hero-wedding', eyebrow: 'The Wedding Edit 2026', title: 'Tradition, reimagined.', copy: 'Heirloom-worthy lehengas, sarees and sherwanis for every celebration.', image: '/images/wedding-bridal.png', link: '/category/festive-edit', button: 'Shop the edit'},
@@ -184,6 +184,7 @@ export default function Home() {
     <ProductRail eyebrow={config.men.eyebrow} title={config.men.title} items={pick('men')} link={config.men.link}/>
     <Editorial/>
     <ProductRail eyebrow={config.jewelry.eyebrow} title={config.jewelry.title} items={pick('jewelry')} link={config.jewelry.link}/>
+    <MeetFlairMantra/>
     <Testimonials config={config.testimonials}/>
     {recentItems.length > 0 && <ProductRail eyebrow="Pick up where you left off" title="Recently viewed" items={recentItems}/>}
     <Social/>

@@ -120,6 +120,19 @@ export function SectionHead({eyebrow, title, text, link, linkLabel = 'View all'}
   </div>;
 }
 
+// The brand photo has the name and tagline in the picture, so it is always shown whole, never cropped.
+export function MeetFlairMantra({link = true}) {
+  return <section className="sf-meet">
+    <div className="sf-meet-img"><img src="/images/flairmantra-brand.jpg" alt="FlairMantra: Elevate Your Essence. Wear Your Confidence, Celebrate Your Style." loading="lazy"/></div>
+    <div className="sf-meet-copy">
+      <p className="sf-eyebrow">Meet FlairMantra</p>
+      <h2>Wear your confidence, celebrate your style</h2>
+      <p>FlairMantra celebrates Indian occasion wear through expressive colour, timeless silhouettes and thoughtful craftsmanship, created to help you feel confidently yourself at every celebration.</p>
+      {link && <div><Link to="/about" className="sf-btn">Our story <ArrowRight/></Link></div>}
+    </div>
+  </section>;
+}
+
 export function Breadcrumbs({items}) {
   return <nav className="sf-crumbs" aria-label="Breadcrumb">
     {items.map(([label, to], i) => <React.Fragment key={label}>
