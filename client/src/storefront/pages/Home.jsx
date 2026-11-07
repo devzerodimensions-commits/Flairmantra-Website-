@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {ArrowRight, ChevronLeft, ChevronRight, Instagram, Play, Quote} from 'lucide-react';
 import {useStore, isNew, slugify} from '../store';
 import {Link, ProductRail, ProductCarousel, ProductGrid, SectionHead} from '../components';
@@ -50,6 +50,36 @@ function Hero() {
       <button className="sf-hero-arrow next" onClick={() => move(1)} aria-label="Next slide"><ChevronRight/></button>
       <div className="sf-hero-dots">{slides.map((b, n) => <button key={b.id} className={n === i ? 'on' : ''} onClick={() => setI(n)} aria-label={`Slide ${n + 1}`}/>)}</div>
     </>}
+  </section>;
+}
+
+const diwaliVideos = [
+  {src: '/videos/diwali-sale', title: 'Pre-Diwali Sale'},
+  {src: '/videos/diwali-offer', title: 'Designer outfits'},
+  {src: '/videos/diwali-deals', title: 'Pre-Diwali deals'},
+  {src: '/videos/diwali-lehenga', title: 'Festive lehengas'}
+];
+
+// Nothing downloads until a shopper presses play, and only one video plays at a time.
+function Reel({src, title}) {
+  const video = useRef(null);
+  const [started, setStarted] = useState(false);
+  const stopOthers = e => document.querySelectorAll('.sf-reel video').forEach(v => { if (v !== e.currentTarget) v.pause(); });
+  return <figure className="sf-reel">
+    <div className="sf-reel-media">
+      <video ref={video} src={`${src}.mp4`} poster={`${src}.jpg`} preload="none" playsInline controls={started} onPlay={stopOthers} onEnded={() => setStarted(false)}/>
+      {!started && <button type="button" onClick={() => { setStarted(true); video.current.play(); }} aria-label={`Play video: ${title}`}><Play/></button>}
+    </div>
+    <figcaption>{title}</figcaption>
+  </figure>;
+}
+
+function DiwaliVideos() {
+  return <section className="sf-diwali">
+    <div className="sf-wrap">
+      <SectionHead eyebrow="Pre-Diwali Sale is on" title="Celebrate Diwali with FlairMantra" link="/category/festive-edit" linkLabel="Shop festive"/>
+      <div className="sf-reels">{diwaliVideos.map(v => <Reel key={v.src} {...v}/>)}</div>
+    </div>
   </section>;
 }
 
@@ -145,6 +175,7 @@ export default function Home() {
   useEffect(() => { document.title = 'FlairMantra | Indian Occasion Wear Online in Canada'; }, []);
   return <>
     <Hero/>
+    <DiwaliVideos/>
     <CategoryStrip/>
     <ProductCarousel eyebrow="Just landed" title="New arrivals" items={newIn} link="/category/new-arrivals"/>
     <PromoSplit/>

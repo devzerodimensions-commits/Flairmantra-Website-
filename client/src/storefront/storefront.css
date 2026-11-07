@@ -864,3 +864,22 @@ body.sf-lock { overflow: hidden; }
 .sf-callout-warn { background: #fdecea; border-left: 3px solid var(--sf-red); }
 .sf-pay-badges { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; color: var(--sf-green); font-weight: 500; }
 .sf-pay-badges svg { width: 13px; height: 13px; }
+
+/* Diwali videos on the home page */
+.sf-diwali { background: #120e0b; color: #f3e9d8; padding: 48px 0; }
+.sf-diwali .sf-eyebrow, .sf-diwali .sf-link-arrow { color: var(--sf-gold); }
+.sf-diwali .sf-section-head h2 { color: #fff; }
+.sf-diwali .sf-link-arrow { flex: none; white-space: nowrap; }
+.sf-reels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.sf-reel { margin: 0; min-width: 0; }
+.sf-reel-media { position: relative; aspect-ratio: 9/16; border-radius: var(--sf-radius-lg); overflow: hidden; background: #000; border: 1px solid rgba(196, 154, 63, .35); }
+.sf-reel video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sf-reel-media button { position: absolute; inset: 0; width: 100%; height: 100%; display: grid; place-items: center; background: rgba(0, 0, 0, .12); color: #fff; transition: background .2s; }
+.sf-reel-media button:hover { background: rgba(0, 0, 0, .3); }
+.sf-reel-media button svg { width: 60px; height: 60px; padding: 16px; border-radius: 50%; background: var(--sf-gold); color: #17130f; fill: currentColor; }
+.sf-reel figcaption { margin-top: 10px; text-align: center; font-weight: 500; color: #f3e9d8; }
+@media (max-width: 900px) {
+  .sf-diwali { padding: 32px 0; }
+  .sf-reels { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; margin: 0 calc(-1 * var(--sf-gutter)); padding: 0 var(--sf-gutter) 8px; scrollbar-width: none; }
+  .sf-reel { flex: 0 0 64%; scroll-snap-align: center; }
+}
